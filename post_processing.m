@@ -475,7 +475,7 @@ else
     % hs = ceil(1);
     if flag_section ~= 4
             y_m = [ymin:0.01:ymax]'; % meters
-            Qn = 1/nm(hs).*A_function(D,Z1,Z2,a,b,y_m).*Rh_function(D,Z1,Z2,a,b,y_m).^(2/3).*I0(hs)^0.5;
+            Qn = 1/nm(hs).*A_function(D,Z1(hs),Z2(hs),a,b(hs),y_m).*Rh_function(D,Z1(hs),Z2(hs),a,b(hs),y_m).^(2/3).*I0(hs)^0.5;
     else
         % [y_table, A, P, Rh, y_bar, n_med, Beta, v, B, Q]
         % [   1,    2, 3, 4,    5,    6,      7,  8,  9, 10]
