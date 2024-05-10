@@ -504,18 +504,18 @@ else
     close all
 end
 %% Dam Breach - Like Post Processing
-% post_processing_Dam_Breach
+post_processing_Dam_Breach
 
 %% States Post-Processing
-% states_post_processing
+states_post_processing
 %% Cross-Section Post-Processing
-% if flag_section == 4
-%     cross_section_post_processing
-% end
+if flag_section == 4
+    cross_section_post_processing
+end
 %% Lateral Profiles
-% if flag_section ~= 4
-%     wse_top_width_regular
-% end
+if flag_section ~= 4
+    wse_top_width_regular
+end
 
 %% Detailed Output
 Detailed_Output_Script

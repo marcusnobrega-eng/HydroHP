@@ -14,7 +14,7 @@ clc
 warning('off') % Deactivate Warnings
 
 % ------------------- Main Input Table ------------------- %
-HydroHP_Input_File = '14_de_julho_data.xlsx'; % Enter the name of the HydroHP-1D input file
+HydroHP_Input_File = 'HydroHP_Input_Data.xlsx'; % Enter the name of the HydroHP-1D input file
 
 %% 1.0 -  Pre-Processing 
 % Reading the Input Data
@@ -370,7 +370,7 @@ if flag_friction == 1
             else
                 var_outlet(mm,1,1) = Vlookup_l(irr_table,col1,interp_base,mm); % Smaller values
             end
-            var_outlet(mm,1,2) = Vlookup_g(irr_table,col1,interp_base,mm); % Larger values
+            var_outlet(mm,1,2) = Vlookup_g(irr_table,col1,interp_base,mm); % Larger values            
             alfa_var_outlet(mm,1) = sqrt((interp_base - area_smaller)/(area_larger - area_smaller));
         end
 
@@ -430,6 +430,11 @@ else
     % [   1,    2,     3,      4,    5,            6,          7,     8,      9,
     % ybar = y - ybar*
     %     ybar(:,1) =  Vlookup_leq(irr_table,col1,Q0*fv,1) - Vlookup_leq(irr_table,col1,Q0*fv,5);
+    if (flag_hydrograph == 1 || flag_nash == 1) && flag_stage_hydrograph ~= 1
+        col1 = 10; % Discharge
+    else
+        col1 = 1; % Depth
+    end
     ybar(:,1) = Vlookup_g(irr_table,col1,s_v*fv,5);
 end
 f2(:,1) = q2(:,1).*abs(q2(:,1))./q1(:,1) + g*q1(:,1).*ybar(:,1);

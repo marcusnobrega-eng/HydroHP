@@ -241,7 +241,7 @@ elseif flag_section == 3
     a = data(1,1);
 else
     % Read HP estimator data
-    [y_irr, A_irr, P_irr, Rh_irr, y_bar_irr, n_med_irr, Beta_irr, u_irr, B_irr, Q_irr, x_cross, y_cross,s0] = HP_estimator(flag_plot_HP,dh);
+    [y_irr, A_irr, P_irr, Rh_irr, y_bar_irr, n_med_irr, Beta_irr, u_irr, B_irr, Q_irr, x_cross, y_cross,s0] = HP_estimator(flag_plot_HP,dh,HydroHP_Input_File);
     irr_table = [y_irr, A_irr, P_irr, Rh_irr, y_bar_irr, n_med_irr, Beta_irr, u_irr, B_irr, Q_irr];
 
     % Some Boundary Conditions
@@ -285,16 +285,7 @@ end
 
 % Manning
 dx = L/(Nx-1);
-if flag_manning ~= 1
-    for i = 1:Nx
-        length_downstream = (i-1)*dx;    
-        if length_downstream <= Lf + dx
-            nm(i,1) = nf;
-        else
-            nm(i,1) = nc;
-        end
-    end
-else
+if flag_manning == 1
     % Manning
       nm = manning_values;
 end
