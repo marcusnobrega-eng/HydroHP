@@ -115,7 +115,7 @@ close all
     end
     % Calculating the Flood extent for time-steps defined below:
     time_steps_flood_extent = [tf/5 2*tf/5 3*tf/5 4*tf/5 tf]; % minutes
-    dt_flood_extent_store = time_steps_flood_extent*60/time_store(2);
+    dt_flood_extent_store = floor(time_steps_flood_extent*60/time_store(2));
     dt_flood_extent_store(end) = dt_flood_extent_store(end)-1;
     for i = 1:length(dt_flood_extent_store)
         flood_extent(:,i) = B2(dt_flood_extent_store(i),:);
