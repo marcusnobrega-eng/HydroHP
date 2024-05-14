@@ -397,6 +397,14 @@ if flag_elapsed_time == 1
     plot(Discharge(2:end,ceil(Nx/2)),Depth(2:end,ceil(Nx/2)),'LineStyle',':','LineWidth',2,'Color','k')
     hold on
     plot(Qn,y_m,'LineStyle','-','LineWidth',2,'Color','k')
+
+    for i = 1:size(labels.obs_points.length,1)
+        node_obs = labels.obs_points.nodes(i);
+        plot(time_save/60*time_scale,Discharge(:,node_obs),'LineStyle',line_style(i),'LineWidth',line_width(i),'Color','k')
+        hold on;
+    end
+
+
     xlabel('Flow Discharge (m\textsuperscript{3}/s)','Interpreter','latex');
     ylabel('Water Depth (m)','Interpreter','latex');
     ylim([ymin 1.1*max([max(y_m),max(y(ceil(Nx)))])]);
@@ -415,57 +423,56 @@ else
     flag_date = 1;
     subplot(3,2,1)
     % Flows
-    plot(time_duration,Discharge(:,1),'LineStyle','--','LineWidth',2,'Color','k')
-    hold on
-    plot(time_duration,Discharge(:,ceil(Nx/2)),'LineStyle',':','LineWidth',2,'Color','k')
-    hold on
-    plot(time_duration,Discharge(:,Nx),'LineStyle','-','LineWidth',2,'Color','k')
-    hold on
+    for i = 1:size(labels.obs_points.length,1)
+        node_obs = labels.obs_points.nodes(i);
+        plot(time_duration,Discharge(:,node_obs),'LineStyle',line_style(i),'LineWidth',line_width(i),'Color','k')
+        hold on;
+    end
+    legend(labels.obs_points.labels,'Interpreter','Latex','location','best')  
     xlabel(date_string(flag_date),'interpreter','latex');
     ylabel('Flow Discharge (m\textsuperscript{3}/s)','Interpreter','latex');
-    legend('Entrance','L/2','Outlet','Interpreter','Latex','location','best')
     % Velocity
     subplot(3,2,2)
-    plot(time_duration,Velocity(:,1),'LineStyle','--','LineWidth',2,'Color','k')
-    hold on
-    plot(time_duration,Velocity(:,ceil(Nx/2)),'LineStyle',':','LineWidth',2,'Color','k')
-    hold on
-    plot(time_duration,Velocity(:,Nx),'LineStyle','-','LineWidth',2,'Color','k')
+    for i = 1:size(labels.obs_points.length,1)
+        node_obs = labels.obs_points.nodes(i);
+        plot(time_duration,Velocity(:,node_obs),'LineStyle',line_style(i),'LineWidth',line_width(i),'Color','k')
+        hold on;
+    end
+    legend(labels.obs_points.labels,'Interpreter','Latex','location','best')  
     %%% Normal Depth Velocity %%%
     xlabel(date_string(flag_date),'interpreter','latex');
     ylabel('Velocity (m/s)','Interpreter','latex');
-    legend('Entrance','L/2','Outlet','Interpreter','Latex','Location','best')
     % Water Depth
     subplot(3,2,3)
-    plot(time_duration,Depth(:,1),'LineStyle','--','LineWidth',2,'Color','k')
-    hold on
-    plot(time_duration,Depth(:,ceil(Nx/2)),'LineStyle',':','LineWidth',2,'Color','k')
-    hold on
-    plot(time_duration,Depth(:,Nx),'LineStyle','-','LineWidth',2,'Color','k')
+    for i = 1:size(labels.obs_points.length,1)
+        node_obs = labels.obs_points.nodes(i);
+        plot(time_duration,Depth(:,node_obs),'LineStyle',line_style(i),'LineWidth',line_width(i),'Color','k')
+        hold on;
+    end
+    legend(labels.obs_points.labels,'Interpreter','Latex','location','best')  
     xlabel(date_string(flag_date),'interpreter','latex');
     ylabel('Water Depths (m)','Interpreter','latex');
-    legend('Entrance','L/2','Outlet','Interpreter','Latex','Location','best')
     % Froude Number
     subplot(3,2,4)
-    plot(time_duration,Froude(:,1),'LineStyle','--','LineWidth',2,'Color','k')
-    hold on
-    plot(time_duration,Froude(:,ceil(Nx/2)),'LineStyle',':','LineWidth',2,'Color','k')
-    hold on
-    plot(time_duration,Froude(:,Nx),'LineStyle','-','LineWidth',2,'Color','k')
+    for i = 1:size(labels.obs_points.length,1)
+        node_obs = labels.obs_points.nodes(i);
+        plot(time_duration,Froude(:,node_obs),'LineStyle',line_style(i),'LineWidth',line_width(i),'Color','k')
+        hold on;
+    end
+    legend(labels.obs_points.labels,'Interpreter','Latex','location','best')  
     xlabel(date_string(flag_date),'interpreter','latex');
     ylabel('Froude Number','Interpreter','latex');
-    legend('Entrance','L/2','Outlet','Interpreter','Latex','Location','best')
     
     % Courant Number
     subplot(3,2,5)
-    plot(time_duration,Courant(:,1),'LineStyle','--','LineWidth',2,'Color','k')
-    hold on
-    plot(time_duration,Courant(:,ceil(Nx/2)),'LineStyle',':','LineWidth',2,'Color','k')
-    hold on
-    plot(time_duration,Courant(:,Nx),'LineStyle','-','LineWidth',2,'Color','k')
+    for i = 1:size(labels.obs_points.length,1)
+        node_obs = labels.obs_points.nodes(i);
+        plot(time_duration,Courant(:,node_obs),'LineStyle',line_style(i),'LineWidth',line_width(i),'Color','k')
+        hold on;
+    end
+    legend(labels.obs_points.labels,'Interpreter','Latex','location','best') 
     xlabel(date_string(flag_date),'interpreter','latex');
     ylabel('Courant Number','Interpreter','latex');
-    legend('Entrance','L/2','Outlet','Interpreter','Latex','Location','best')
     
     % Rating Curve
     % Solving for normal Depth
@@ -475,7 +482,7 @@ else
     % hs = ceil(1);
     if flag_section ~= 4
             y_m = [ymin:0.01:ymax]'; % meters
-            Qn = 1/nm(hs).*A_function(D,Z1,Z2,a,b,y_m).*Rh_function(D,Z1,Z2,a,b,y_m).^(2/3).*I0(hs)^0.5;
+            Qn = 1/nm(hs).*A_function(D,Z1(hs),Z2(hs),a,b(hs),y_m).*Rh_function(D,Z1(hs),Z2(hs),a,b(hs),y_m).^(2/3).*I0(hs)^0.5;
     else
         % [y_table, A, P, Rh, y_bar, n_med, Beta, v, B, Q]
         % [   1,    2, 3, 4,    5,    6,      7,  8,  9, 10]
@@ -488,15 +495,15 @@ else
     end
     subplot(3,2,6)
     tbegin = 30; % (steps), considering initial stabilization of the domain
-    plot(Discharge(2:end,hs),Depth(2:end,hs),'LineStyle','--','LineWidth',2,'Color','k')
-    hold on
-    plot(Discharge(2:end,ceil(Nx/2)),Depth(2:end,ceil(Nx/2)),'LineStyle',':','LineWidth',2,'Color','k')
-    hold on
-    plot(Qn,y_m,'LineStyle','-','LineWidth',2,'Color','k')
+    for i = 1:size(labels.obs_points.length,1)
+        node_obs = labels.obs_points.nodes(i);
+        plot(Discharge(:,node_obs),Depth(:,node_obs),'LineStyle',line_style(i),'LineWidth',line_width(i),'Color','k')
+        hold on;
+    end
+    legend(labels.obs_points.labels,'Interpreter','Latex','location','best')
     xlabel('Flow Discharge (m\textsuperscript{3}/s)','Interpreter','latex');
     ylabel('Water Depth (m)','Interpreter','latex');
     ylim([ymin 1.1*max([max(y_m),max(y(ceil(Nx)))])]);
-    legend('Q(Inlet)','Q(Nx/2)','$Q_{n}$ (L)','Interpreter','Latex','Location','best')
     hold off
     label_plot = strcat(labels.simulation_info.ID,'_',labels.simulation_info.NAME,'_','Summary_Charts.pdf');    
     exportgraphics(gcf,fullfile(folderName,label_plot),'ContentType','vector')

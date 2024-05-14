@@ -48,7 +48,7 @@ for i=1:length(t)
             B2(i,pos_b) = Vlookup_g(irr_table,col1,Flow_Area(i,pos_b),9);
         end
     end
-    if flag_section == 1
+    if flag_section == 1 && flag_trapezoid_sections ~= 1
          offset = max(b)/2 + max((Z1 + Z2))/2.*(max(max(Depth)));
          xmax_plot = max((Z1 + Z2)*max(max(Depth)) + b);
     elseif flag_section == 2
@@ -57,11 +57,22 @@ for i=1:length(t)
     elseif flag_section == 3
         offset = xmax/2;
         xmax_plot = xmax;
-    else
+    elseif flag_section == 4
         offset = max(x_cross)/2; % From station data
         xmax_plot = max(x_cross);
+    elseif flag_trapezoid_sections == 1
+        offset = 1*max(max(B2))/2;
+        xmax_plot = 2*offset;
     end
-    right_margin = B2(i,:)/2 + offset'; left_margin = -B2(i,:)/2 + offset';
+    if flag_trapezoid_sections ~= 1
+        right_margin = B2(i,:)/2 + offset'; left_margin = -B2(i,:)/2 + offset';
+    else
+        right_margin = cross_section.trapezoid.b/2  ...
+                     + cross_section.trapezoid.slope_right.*Depth(i,:)' + offset';
+        left_margin = -(cross_section.trapezoid.b/2  ...
+                     + cross_section.trapezoid.slope_left.*Depth(i,:)') + offset'; 
+        left_margin = left_margin'; right_margin = right_margin';
+    end
     plot(x,right_margin,'k','LineWidth',2); set(gca,'YDir','reverse');
     hold on
     plot(x,left_margin,'k','LineWidth',2); set(gca,'YDir','reverse');
@@ -72,7 +83,7 @@ for i=1:length(t)
     ylim([0, xmax_plot]);
     xlim([0, max(x)]);
     grid on
-    title(sprintf('$B_{{max}}(t)$ = %.2f m', max(right_margin - left_margin)),'fontsize',16,'interpreter','latex');
+    title(sprintf('$B_{{\mathrm{max}}}(t)$ = %.2f m', max(right_margin - left_margin)),'fontsize',16,'interpreter','latex');
     set(gca,'FontSize',12,'FontName','Garamond')
     
     % ---------------------  Ploting Water Surface Elevation ------- %
