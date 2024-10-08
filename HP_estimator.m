@@ -4,8 +4,8 @@
 % Goal - Calculate Hydraulic Properties of Irregular and Regular Sections
 % for a given cross-sections and Manning's roughness coefficients
 
-function [y_table, A, P, Rh, y_bar, n_med, Beta, v, B, Q, x_absolute, y,s0] = HP_estimator(flag_plot_HP,dh)
-input_table = xlsread('HyProSWE_Input_Data.xlsx','Irregular_Cross_Section');
+function [y_table, A, P, Rh, y_bar, n_med, Beta, v, B, Q, x_absolute, y,s0] = HP_estimator(flag_plot_HP,dh,HydroHP_Input_File)
+input_table = xlsread(HydroHP_Input_File,'Irregular_Cross_Section');
 input_data = input_table(1:5,1);
 input_data_coordinates = input_table(2:end,3:end);
 flag_length = input_data(1,1); % If == 1, use lengths as main input data, otherwise use absolute values of x (m)

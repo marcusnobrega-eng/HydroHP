@@ -123,7 +123,7 @@ if flag_stage_hydrograph ~= 0
     % Stage Hydrograph
     input_stage_data = table2array(data(8:end,7:8));
     time_stage_ = input_stage_data(1:end,1);
-    he1_ = data(1:end,2);
+    he1_ = input_stage_data(1:end,2);
     he1 = zeros(size(he1_,1) - sum(isnan(he1_)),1);
     time_stage = zeros(size(time_stage_,1) - sum(isnan(time_stage_)),1);
     % Taking away nans
@@ -230,6 +230,9 @@ end
 % Section
 if flag_section == 1
     input_slope_trapezoid = table2array(data(1:3,11));
+    if iscell(input_slope_trapezoid)
+        input_slope_trapezoid = str2double(input_slope_trapezoid);
+    end
     b = (input_slope_trapezoid(1,1))*ones(Nx,1);
     Z1 = input_slope_trapezoid(2,1)*ones(Nx,1);
     Z2 = input_slope_trapezoid(3,1)*ones(Nx,1);
@@ -241,7 +244,7 @@ elseif flag_section == 3
     a = data(1,1);
 else
     % Read HP estimator data
-    [y_irr, A_irr, P_irr, Rh_irr, y_bar_irr, n_med_irr, Beta_irr, u_irr, B_irr, Q_irr, x_cross, y_cross,s0] = HP_estimator(flag_plot_HP,dh);
+    [y_irr, A_irr, P_irr, Rh_irr, y_bar_irr, n_med_irr, Beta_irr, u_irr, B_irr, Q_irr, x_cross, y_cross,s0] = HP_estimator(flag_plot_HP,dh,HydroHP_Input_File);
     irr_table = [y_irr, A_irr, P_irr, Rh_irr, y_bar_irr, n_med_irr, Beta_irr, u_irr, B_irr, Q_irr];
 
     % Some Boundary Conditions
@@ -260,6 +263,9 @@ end
 
 % Contraint at observed flow
 if flag_hydrograph == 1
+    if flag_hydrograph == 1 && flag_nash == 1
+        error('Please specify either a tabular hydrograph or a nash hydrograph.')
+    end
     if max(time) ~= tf
         z = round(tf - max(time),0);
         for i = 1:z
@@ -285,7 +291,8 @@ end
 
 % Manning
 dx = L/(Nx-1);
-if flag_manning ~= 1
+flag_multiple_dams = 0; % Deactivated
+if flag_manning ~= 1 && flag_dam_break_hydrograph == 1 && flag_multiple_dams == 1
     for i = 1:Nx
         length_downstream = (i-1)*dx;    
         if length_downstream <= Lf + dx
@@ -294,9 +301,6 @@ if flag_manning ~= 1
             nm(i,1) = nc;
         end
     end
-else
-    % Manning
-      nm = manning_values;
 end
 
 % Hydrograph
@@ -305,6 +309,7 @@ if  flag_dam_break_hydrograph == 1
     [time_,Qe1_] = breach_hydrograph(h_dam,W_dam,B_dam,0.1,tf*60,flag_plot,labels.simulation_info.ID,labels.simulation_info.NAME);
     Qe1 = zeros(size(Qe1_,1) - sum(isnan(Qe1_)),1);
     time = zeros(size(time_,1) - sum(isnan(time_)),1);
+    flag_hydrograph = 1; % Imposing an inflow hydrograph B.C
 end
 
 % Boundary condition at t = 0

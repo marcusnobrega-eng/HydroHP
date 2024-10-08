@@ -363,7 +363,7 @@ if flag_elapsed_time == 1
     subplot(3,2,5)
      for i = 1:size(labels.obs_points.length,1)
         node_obs = labels.obs_points.nodes(i);
-        plot(time_save/60*time_scale,Froude(:,node_obs),'LineStyle',line_style(i),'LineWidth',line_width(i),'Color','k')
+        plot(time_save/60*time_scale,Courant(:,node_obs),'LineStyle',line_style(i),'LineWidth',line_width(i),'Color','k')
         hold on;
      end  
     xlabel(date_string(flag_date),'interpreter','latex');
@@ -504,18 +504,18 @@ else
     close all
 end
 %% Dam Breach - Like Post Processing
-% post_processing_Dam_Breach
+post_processing_Dam_Breach
 
 %% States Post-Processing
-% states_post_processing
+states_post_processing
 %% Cross-Section Post-Processing
-% if flag_section == 4
-%     cross_section_post_processing
-% end
+if flag_section == 4
+     cross_section_post_processing
+end
 %% Lateral Profiles
-% if flag_section ~= 4
-%     wse_top_width_regular
-% end
+if flag_section ~= 4
+     wse_top_width_regular
+ end
 
 %% Detailed Output
 Detailed_Output_Script

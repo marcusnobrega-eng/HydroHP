@@ -14,7 +14,7 @@ clc
 warning('off') % Deactivate Warnings
 
 % ------------------- Main Input Table ------------------- %
-HydroHP_Input_File = '14_de_julho_data.xlsx'; % Enter the name of the HydroHP-1D input file
+HydroHP_Input_File = 'Examples/Example_4_Irregular_XS.xlsx'; % Enter the name of the HydroHP-1D input file
 
 %% 1.0 -  Pre-Processing 
 % Reading the Input Data
@@ -1060,6 +1060,9 @@ while time <= (time_end_min) % Main loop
             Velocity(t_store,:) = q2(:,2)./q1(:,1); % m/s
             Froude(t_store,:) = Fr(:,2);
             Courant(t_store,:) = Cn(:,2);
+            if max(Cn(:,2)) > 0.6
+                ttt = 1;
+            end
             t_store_prev = t_store;
         end
     end
