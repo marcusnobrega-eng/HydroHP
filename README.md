@@ -33,7 +33,7 @@ There is also a recorded lecture about the model freely available here:
 https://emailarizona-my.sharepoint.com/:v:/g/personal/marcusnobrega_arizona_edu/EdSsUT40WRpCsQBPfGByq-gBKTauRmUjzU38KFJz-HaelA?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=i6Ihe7
 
 Copyright 2023 - the University of Sao Paulo and the University of Texas at San Antonio
-- Developer: Mr. Marcus Nobrega Gomes Junior, Ph.D. Candidate
+- Developer: Mr. Marcus Nobrega Gomes Junior, Ph.D
 
 License
 Unless required by applicable law or agreed to in writing, software
@@ -70,7 +70,7 @@ Please, email me at marcusnobrega.engcivil@gmail.com
 Looking for examples? Please go to my GitHub account and check it out.
 
 Copyright 2022 - the University of Sao Paulo and the University of Texas at San Antonio
-- Developer: Mr. Marcus Nobrega Gomes Junior, Ph.D. Candidate
+- Developer: Mr. Marcus Nobrega Gomes Junior, Ph.D
 
 License
 Unless required by applicable law or agreed to in writing, software
