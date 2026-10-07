@@ -50,7 +50,7 @@ and a single irregular section.
 |---|---|
 | Root `.m` files | V5 solver, callable interface, input, hydraulic-property, and postprocessing scripts |
 | `Examples/` | Runnable Excel inputs |
-| `tests/` | Callable-interface regression checks |
+| `tests/` | Callable-interface and input-schema checks |
 | `docs/cross_section_input.md` | Multi-section table schema and validation rules |
 | `docs/reference/` | Published supplement and hydraulic-property reference figures |
 | `docs/tutorial/` | Tutorial slides and teaching material |
