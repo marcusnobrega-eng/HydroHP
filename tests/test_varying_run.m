@@ -23,6 +23,11 @@ assert(constant.initialization.converged);
 assert(constant.initialization.relative_state_change_rate_per_s < 1e-4);
 assert(constant.initialization.relative_discharge_error < 0.03);
 assert(abs(constant.ledger.relative_residual) < 1e-11);
+assert(constant.metadata.solver == "varying-section-hll");
+assert(constant.ledger.maximum_cfl_number <= constant.metadata.cfl_target);
+assert(constant.ledger.minimum_accepted_dt_s > 0);
+assert(constant.ledger.minimum_accepted_dt_s <= constant.metadata.maximum_dt_s);
+assert(constant.ledger.step_count == numel(constant.time_s) - 1);
 assert(all(isfinite([constant.area_m2(:); constant.discharge_m3s(:)])));
 
 % A piecewise-linear hydrograph must enter with its exact integrated volume.
