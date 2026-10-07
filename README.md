@@ -68,10 +68,8 @@ Machine-readable citation metadata are provided in `CITATION.cff`.
 
 ## License
 
-No explicit software license has been selected yet. The repository owner must
-choose one before the modernized release is published.
+HydroHP is distributed under the [MIT License](LICENSE).
 
 ## Contact
 
 Marcus Nóbrega Gomes Júnior — `marcusnobrega.engcivil@gmail.com`
-
