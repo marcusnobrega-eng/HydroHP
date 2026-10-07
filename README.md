@@ -13,10 +13,11 @@ dam-break applications.
 - spatially varying bed elevation, roughness, and regular-section dimensions;
 - automatic plots, videos, and CSV outputs.
 
-The modernization branch also includes a validated long-table input format
-and hydraulic-property tables for spatially varying irregular cross-sections.
-Those tables can be mapped to cell or interface locations between surveyed
-profiles. The numerical kernel does not use them yet.
+The modernization branch also includes a validated long-table input format,
+hydraulic-property tables for spatially varying irregular cross-sections, and
+a separately tested finite-volume step that uses the mapped cell/interface
+geometry. The new step preserves a lake at rest and records CFL and wet/dry
+volume diagnostics; it is not yet connected to the public run interface.
 
 The current V5 irregular-section path uses one profile throughout the modeled
 reach. Support for several spatially varying irregular profiles is under
