@@ -7,18 +7,43 @@
 % marcusnobrega.engcivil@gmail.com
 
 
-% -------------------- All Rights Reserved ---------------------- %
+% SPDX-License-Identifier: MIT
         
-clear all
-clc
+clearvars -except HydroHP_Input_File HydroHP_Options HydroHP_Input_Overrides HydroHP_Cleanup
+if ~exist('HydroHP_Options','var') || ~isfield(HydroHP_Options,'clear_command_window') || HydroHP_Options.clear_command_window
+    clc
+end
 warning('off') % Deactivate Warnings
 
 % ------------------- Main Input Table ------------------- %
-HydroHP_Input_File = 'Examples/Example_4_Irregular_XS.xlsx'; % Enter the name of the HydroHP-1D input file
+if ~exist('HydroHP_Input_File','var')
+    HydroHP_Input_File = 'Examples/Example_4_Irregular_XS.xlsx'; % Enter the name of the HydroHP-1D input file
+end
 
 %% 1.0 -  Pre-Processing 
 % Reading the Input Data
 Read_Input_Data % Here we read the .xlsx input data file. Please don't change the name of this file.
+
+% Optional programmatic overrides used by hydrohp_run. The Excel file still
+% supplies the remaining legacy inputs until the common schema is added.
+if exist('HydroHP_Input_Overrides','var')
+    if isfield(HydroHP_Input_Overrides,'hydrograph') && ~isempty(HydroHP_Input_Overrides.hydrograph)
+        time = HydroHP_Input_Overrides.hydrograph.time_min(:);
+        Qe1 = HydroHP_Input_Overrides.hydrograph.discharge_m3s(:);
+        flag_hydrograph = 1;
+        flag_nash = 0;
+        flag_dam_break_hydrograph = 0;
+    end
+    if isfield(HydroHP_Input_Overrides,'manning_n') && ~isempty(HydroHP_Input_Overrides.manning_n)
+        if isscalar(HydroHP_Input_Overrides.manning_n)
+            nm = HydroHP_Input_Overrides.manning_n;
+            flag_manning = 0;
+        else
+            manning_values = HydroHP_Input_Overrides.manning_n(:);
+            flag_manning = 1;
+        end
+    end
+end
 
 % Checking if at least one boundary condition is considered
 if flag_hydrograph ~= 1 && flag_nash ~= 1 && flag_stage_hydrograph ~= 1 && flag_outlet ~= 0
@@ -1098,9 +1123,11 @@ water_depths = Depth;
 %%% Post Processing Figures %%%
 % Call function
 warning('on');
-post_processing
-close all
-computational_time
+computational_time = toc;
+if ~exist('HydroHP_Options','var') || ~isfield(HydroHP_Options,'postprocess') || HydroHP_Options.postprocess
+    post_processing
+    close all
+end
 disp(['Thank you for using HydroHP. If you have any questions, please contact me at marcusnobrega.engcivil@gmail.com).'])
 disp(['Also, please check your current matlab folder. The outputs are there.'])
 

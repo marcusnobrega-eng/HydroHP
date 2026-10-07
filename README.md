@@ -24,10 +24,18 @@ development.
 
 ## Quick start
 
-1. Open one workbook in `Examples/` or copy `HydroHP_Input_Data.xlsx`.
-2. Set `HydroHP_Input_File` near the top of `HydroHP_1D_V5.m`.
-3. Run `HydroHP_1D_V5.m` from the repository root.
-4. Generated files are written to `Modeling_Results/`.
+Run a workbook without editing the solver:
+
+```matlab
+input = hydrohp_read_excel("Examples/Example_2_Dam_Break.xlsx");
+result = hydrohp_run(input);
+```
+
+The returned structure contains time, distance, area, discharge, depth,
+velocity, Froude, Courant, and execution-time arrays. Set
+`input.postprocess = true` to request the legacy figures and CSV outputs.
+`Examples/run_from_script.m` also shows optional script-defined hydrograph and
+Manning values. The original `HydroHP_1D_V5.m` entry point remains available.
 
 The example inputs cover regular channel design, a regular-section dam break,
 and a single irregular section.
@@ -36,8 +44,9 @@ and a single irregular section.
 
 | Path | Contents |
 |---|---|
-| Root `.m` files | Frozen V5 solver, input, hydraulic-property, and postprocessing scripts |
+| Root `.m` files | V5 solver, callable interface, input, hydraulic-property, and postprocessing scripts |
 | `Examples/` | Runnable Excel inputs |
+| `tests/` | Callable-interface regression checks |
 | `docs/reference/` | Published supplement and hydraulic-property reference figures |
 | `docs/tutorial/` | Tutorial slides and teaching material |
 | `apps/` | Optional MATLAB applications |
@@ -61,7 +70,8 @@ Machine-readable citation metadata are provided in `CITATION.cff`.
 
 ## Known limitations
 
-- The V5 solver is a monolithic script coupled to Excel input and plotting.
+- The V5 numerical kernel remains a monolithic script and still obtains its
+  base configuration and geometry from an Excel workbook.
 - Several varying irregular cross-sections are not yet supported.
 - Automated regression tests are being added during modernization.
 - Some legacy postprocessing profiles fail after the numerical loop completes.
