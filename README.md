@@ -13,6 +13,10 @@ dam-break applications.
 - spatially varying bed elevation, roughness, and regular-section dimensions;
 - automatic plots, videos, and CSV outputs.
 
+The modernization branch also includes a validated long-table input format
+for spatially varying irregular cross-sections. The numerical kernel does not
+use those profiles yet.
+
 The current V5 irregular-section path uses one profile throughout the modeled
 reach. Support for several spatially varying irregular profiles is under
 development.
@@ -47,6 +51,7 @@ and a single irregular section.
 | Root `.m` files | V5 solver, callable interface, input, hydraulic-property, and postprocessing scripts |
 | `Examples/` | Runnable Excel inputs |
 | `tests/` | Callable-interface regression checks |
+| `docs/cross_section_input.md` | Multi-section table schema and validation rules |
 | `docs/reference/` | Published supplement and hydraulic-property reference figures |
 | `docs/tutorial/` | Tutorial slides and teaching material |
 | `apps/` | Optional MATLAB applications |
