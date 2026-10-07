@@ -15,7 +15,8 @@ dam-break applications.
 
 The modernization branch also includes a validated long-table input format
 and hydraulic-property tables for spatially varying irregular cross-sections.
-The numerical kernel does not use those profiles yet.
+Those tables can be mapped to cell or interface locations between surveyed
+profiles. The numerical kernel does not use them yet.
 
 The current V5 irregular-section path uses one profile throughout the modeled
 reach. Support for several spatially varying irregular profiles is under
