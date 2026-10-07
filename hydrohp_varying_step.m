@@ -63,7 +63,7 @@ for face_index = 1:cell_count + 1
                 face_sections(face_index), inner, inner_discharge, ...
                 options.boundary.upstream_discharge_m3s, g, minimum_area);
         else
-            [flux(face_index, :), face_speed] = rusanov_flux( ...
+            [flux(face_index, :), face_speed] = hll_flux( ...
                 inner, inner, -inner_discharge, inner_discharge, g, minimum_area);
         end
     elseif face_index == cell_count + 1
@@ -75,7 +75,7 @@ for face_index = 1:cell_count + 1
                 face_sections(face_index), inner, inner_discharge, ...
                 options.boundary, g, minimum_area);
         else
-            [flux(face_index, :), face_speed] = rusanov_flux( ...
+            [flux(face_index, :), face_speed] = hll_flux( ...
                 inner, inner, inner_discharge, -inner_discharge, g, minimum_area);
         end
     else
@@ -85,7 +85,7 @@ for face_index = 1:cell_count + 1
         right = state_from_stage(face_sections(face_index), stage(right_cell));
         q_left = velocity(left_cell) * left.area_m2;
         q_right = velocity(right_cell) * right.area_m2;
-        [flux(face_index, :), face_speed] = rusanov_flux( ...
+        [flux(face_index, :), face_speed] = hll_flux( ...
             left, right, q_left, q_right, g, minimum_area);
         pressure_at_right_face(face_index - 1) = left.hydrostatic_integral_m3;
         pressure_at_left_face(face_index) = right.hydrostatic_integral_m3;
@@ -195,7 +195,7 @@ end
 table_data = section.table;
 end
 
-function [flux, maximum_speed] = rusanov_flux( ...
+function [flux, maximum_speed] = hll_flux( ...
         left, right, q_left, q_right, g, minimum_area)
 u_left = 0;
 u_right = 0;
@@ -209,11 +209,23 @@ if right.area_m2 > minimum_area
     u_right = q_right / right.area_m2;
     c_right = sqrt(g * right.area_m2 / max(right.top_width_m, eps));
 end
-maximum_speed = max(abs(u_left) + c_left, abs(u_right) + c_right);
 physical_left = [q_left, q_left * u_left + g * left.hydrostatic_integral_m3];
 physical_right = [q_right, q_right * u_right + g * right.hydrostatic_integral_m3];
-flux = 0.5 * (physical_left + physical_right) - 0.5 * maximum_speed * ...
-    ([right.area_m2, q_right] - [left.area_m2, q_left]);
+left_speed = min(u_left - c_left, u_right - c_right);
+right_speed = max(u_left + c_left, u_right + c_right);
+maximum_speed = max(abs(left_speed), abs(right_speed));
+if left_speed >= 0
+    flux = physical_left;
+elseif right_speed <= 0
+    flux = physical_right;
+elseif right_speed - left_speed > eps
+    flux = (right_speed * physical_left - left_speed * physical_right + ...
+        left_speed * right_speed * ...
+        ([right.area_m2, q_right] - [left.area_m2, q_left])) / ...
+        (right_speed - left_speed);
+else
+    flux = 0.5 * (physical_left + physical_right);
+end
 end
 
 function [flux, speed] = upstream_flux( ...
