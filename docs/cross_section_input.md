@@ -28,6 +28,18 @@ sheet named `CrossSections`. It stops with one combined error message when the
 table is invalid. `report` records the number of profiles and points, sorted
 chainages, errors, and warnings.
 
-The H3 reader validates structure only. Hydraulic-property tables, valid stage
-ranges, and interpolation between profiles are implemented and tested in H4
-and H5.
+Build one hydraulic-property curve per profile with:
+
+```matlab
+[section_data, report] = hydrohp_build_section_tables(sections, 0.05, "scm");
+depth_m = hydrohp_depth_from_area(section_data(1), area_m2);
+```
+
+The second argument is the maximum regular depth increment in metres; surveyed
+vertex elevations are also inserted in the grid. `scm` uses one equivalent
+roughness for the complete wetted section. `dcm` sums conveyance over contiguous
+roughness zones. Tables stop at the lower of the two outer-bank elevations so
+that the cross-section remains closed.
+
+H4 does not interpolate geometry between profiles or connect these tables to
+the time-stepping kernel. Those changes belong to H5.

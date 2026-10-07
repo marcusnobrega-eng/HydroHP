@@ -14,8 +14,8 @@ dam-break applications.
 - automatic plots, videos, and CSV outputs.
 
 The modernization branch also includes a validated long-table input format
-for spatially varying irregular cross-sections. The numerical kernel does not
-use those profiles yet.
+and hydraulic-property tables for spatially varying irregular cross-sections.
+The numerical kernel does not use those profiles yet.
 
 The current V5 irregular-section path uses one profile throughout the modeled
 reach. Support for several spatially varying irregular profiles is under
