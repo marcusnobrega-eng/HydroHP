@@ -1,0 +1,12 @@
+.DS_Store
+*.asv
+*.m~
+slprj/
+
+# Generated HydroHP outputs
+/Modeling_Results/
+/Cross_Section.pdf
+/Hydraulic_Properties.pdf
+/Normalized_Values.pdf
+/Rating Curve.pdf
+/legacy_core.mat

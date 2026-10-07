@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you use HydroHP-1D, please cite the software paper below."
+title: "HydroHP-1D"
+type: software
+version: "5"
+authors:
+  - family-names: "Gomes Júnior"
+    given-names: "Marcus N."
+    email: "marcusnobrega.engcivil@gmail.com"
+repository-code: "https://github.com/marcusnobrega-eng/HydroHP"
+preferred-citation:
+  type: article
+  title: "Modeling unsteady and steady 1D hydrodynamics under different hydraulic conceptualizations: Model/software development and case studies"
+  authors:
+    - family-names: "Gomes Júnior"
+      given-names: "Marcus N."
+    - family-names: "Castillo Rápalo"
+      given-names: "Luis M. C."
+    - family-names: "Oliveira"
+      given-names: "Paulo T. S."
+    - family-names: "Giacomoni"
+      given-names: "Marcio H."
+    - family-names: "do Lago"
+      given-names: "César A. F."
+    - family-names: "Mendiondo"
+      given-names: "Eduardo M."
+  journal: "Environmental Modelling & Software"
+  volume: "167"
+  year: 2023
+  doi: "10.1016/j.envsoft.2023.105733"
