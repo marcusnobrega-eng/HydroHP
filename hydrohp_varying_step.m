@@ -52,22 +52,27 @@ flux = zeros(cell_count + 1, 2);
 pressure_at_right_face = zeros(cell_count, 1);
 pressure_at_left_face = zeros(cell_count, 1);
 maximum_face_speed = 0;
+maximum_face_index = 1;
 
 for face_index = 1:cell_count + 1
     if face_index == 1
-        inner = state_from_stage(face_sections(face_index), stage(1));
+        inner = boundary_inner_state(face_sections(face_index), ...
+            cell_sections(1), stage(1), options.boundary, "upstream");
         inner_discharge = velocity(1) * inner.area_m2;
         pressure_at_left_face(1) = inner.hydrostatic_integral_m3;
         if isfield(options.boundary, 'upstream_discharge_m3s')
             [flux(face_index, :), face_speed] = upstream_flux( ...
                 face_sections(face_index), inner, inner_discharge, ...
-                options.boundary.upstream_discharge_m3s, g, minimum_area);
+                options.boundary.upstream_discharge_m3s, ...
+                options.boundary, g, minimum_area);
         else
             [flux(face_index, :), face_speed] = hll_flux( ...
                 inner, inner, -inner_discharge, inner_discharge, g, minimum_area);
         end
     elseif face_index == cell_count + 1
-        inner = state_from_stage(face_sections(face_index), stage(cell_count));
+        inner = boundary_inner_state(face_sections(face_index), ...
+            cell_sections(cell_count), stage(cell_count), ...
+            options.boundary, "downstream");
         inner_discharge = velocity(cell_count) * inner.area_m2;
         pressure_at_right_face(cell_count) = inner.hydrostatic_integral_m3;
         if isfield(options.boundary, 'downstream_type')
@@ -90,7 +95,10 @@ for face_index = 1:cell_count + 1
         pressure_at_right_face(face_index - 1) = left.hydrostatic_integral_m3;
         pressure_at_left_face(face_index) = right.hydrostatic_integral_m3;
     end
-    maximum_face_speed = max(maximum_face_speed, face_speed);
+    if face_speed > maximum_face_speed
+        maximum_face_speed = face_speed;
+        maximum_face_index = face_index;
+    end
 end
 
 if maximum_face_speed > 0
@@ -102,8 +110,9 @@ else
 end
 if cfl_number > options.cfl_target * (1 + 10*eps)
     error('hydrohp:CFLViolation', ...
-        'dt = %.6g s gives CFL %.6g; use dt <= %.6g s.', ...
-        dt_s, cfl_number, recommended_dt_s);
+        ['dt = %.6g s gives CFL %.6g at face %d (x = %.6g m); ' ...
+        'use dt <= %.6g s.'], dt_s, cfl_number, maximum_face_index, ...
+        face_sections(maximum_face_index).x_m, recommended_dt_s);
 end
 
 area_raw = area_m2 - dt_s / dx_m * diff(flux(:, 1));
@@ -135,12 +144,30 @@ end
 diagnostics = struct( ...
     'cfl_number', cfl_number, ...
     'maximum_wave_speed_m_s', maximum_face_speed, ...
+    'maximum_wave_speed_face_index', maximum_face_index, ...
     'recommended_dt_s', recommended_dt_s, ...
     'boundary_inflow_volume_m3', dt_s * flux(1, 1), ...
     'boundary_outflow_volume_m3', dt_s * flux(end, 1), ...
     'volume_adjustment_m3', volume_adjustment_m3, ...
     'storage_change_m3', sum(area_new - area_m2) * dx_m, ...
     'geometric_source_m4_s2', geometric_source);
+end
+
+function state = boundary_inner_state( ...
+        face_section, cell_section, cell_stage_m, boundary, side)
+use_local_depth = side == "upstream" && ...
+    isfield(boundary, 'upstream_state_type') && ...
+    lower(string(boundary.upstream_state_type)) == "local_depth";
+use_local_depth = use_local_depth || (side == "downstream" && ...
+    isfield(boundary, 'downstream_type') && ...
+    lower(string(boundary.downstream_type)) == "normal_depth");
+if use_local_depth
+    depth_m = max(cell_stage_m - cell_section.invert_elevation_m, 0);
+    state = state_from_stage( ...
+        face_section, face_section.invert_elevation_m + depth_m);
+else
+    state = state_from_stage(face_section, cell_stage_m);
+end
 end
 
 function state = state_from_area(section, area_m2)
@@ -167,7 +194,9 @@ stage_tolerance = 1e-10 * max(1, ...
     abs(section.maximum_water_surface_elevation_m));
 if stage_m > section.maximum_water_surface_elevation_m + stage_tolerance
     error('hydrohp:StageOutsideSectionRange', ...
-        'Stage %.6g m exceeds the local section range.', stage_m);
+        'Stage %.6g m exceeds the local section range [%.6g, %.6g] m at x = %.6g m.', ...
+        stage_m, section.invert_elevation_m, ...
+        section.maximum_water_surface_elevation_m, section.x_m);
 end
 stage_m = min(stage_m, section.maximum_water_surface_elevation_m);
 state = struct( ...
@@ -229,11 +258,28 @@ end
 end
 
 function [flux, speed] = upstream_flux( ...
-        section, inner, inner_discharge, prescribed_discharge, g, minimum_area)
+        section, inner, inner_discharge, prescribed_discharge, ...
+        boundary, g, minimum_area)
 if ~isscalar(prescribed_discharge) || ~isfinite(prescribed_discharge) || ...
         prescribed_discharge < 0
     error('hydrohp:InvalidUpstreamDischarge', ...
         'The prescribed upstream discharge must be a finite nonnegative scalar.');
+end
+if isfield(boundary, 'upstream_state_type') && ...
+        lower(string(boundary.upstream_state_type)) == "local_depth"
+    state = inner;
+    if prescribed_discharge > 0
+        critical = critical_state( ...
+            section, prescribed_discharge, g, minimum_area);
+        if state.area_m2 < critical.area_m2
+            state = critical;
+        end
+    end
+    flux = physical_flux(state, prescribed_discharge, g, minimum_area);
+    speed = abs(safe_velocity( ...
+        prescribed_discharge, state.area_m2, minimum_area)) + ...
+        wave_celerity(state, g, minimum_area);
+    return
 end
 [inner_phi, inner_celerity] = characteristic_values(section, inner.area_m2, g);
 inner_velocity = safe_velocity(inner_discharge, inner.area_m2, minimum_area);
@@ -250,6 +296,28 @@ state = solve_subcritical_state( ...
 flux = physical_flux(state, prescribed_discharge, g, minimum_area);
 speed = abs(safe_velocity(prescribed_discharge, state.area_m2, minimum_area)) + ...
     wave_celerity(state, g, minimum_area);
+end
+
+function state = critical_state(section, discharge, g, minimum_area)
+areas = section.table.area_m2;
+widths = section.table.top_width_m;
+wet = areas > minimum_area & widths > 0;
+areas = areas(wet);
+values = discharge^2 * widths(wet) - g * areas.^3;
+upper_index = find(values <= 0, 1, 'first');
+if isempty(upper_index)
+    error('hydrohp:BoundaryStateUnavailable', ...
+        'The critical inflow state exceeds the upstream section range.');
+elseif upper_index == 1
+    critical_area = areas(1);
+else
+    residual = @(area) discharge^2 * interp1( ...
+        section.table.area_m2, section.table.top_width_m, area, 'linear') - ...
+        g * area.^3;
+    critical_area = fzero(residual, ...
+        [areas(upper_index - 1), areas(upper_index)]);
+end
+state = state_from_area(section, critical_area);
 end
 
 function [flux, speed] = downstream_flux( ...

@@ -20,7 +20,8 @@ cell_x_m = face_x_m(1:end-1) + dx_m / 2;
 cell_sections = hydrohp_map_sections_to_grid(input.section_data, cell_x_m);
 face_sections = hydrohp_map_sections_to_grid(input.section_data, face_x_m);
 
-[area_m2, discharge_m3s] = initial_state(cell_sections, input);
+[area_m2, discharge_m3s] = initial_state( ...
+    cell_sections, face_sections, input);
 initialization = struct('type', input.initialization_type, ...
     'base_discharge_m3s', input.base_discharge_m3s, ...
     'spinup_duration_s', input.spinup_duration_s, ...
@@ -142,7 +143,7 @@ elseif downstream_type == "stage" && ...
 end
 end
 
-function [area, discharge] = initial_state(sections, input)
+function [area, discharge] = initial_state(sections, face_sections, input)
 cell_count = numel(sections);
 discharge = input.base_discharge_m3s * ones(cell_count, 1);
 initialization_type = lower(string(input.initialization_type));
@@ -152,16 +153,22 @@ if initialization_type == "normal_depth"
         error('hydrohp:InvalidInitialization', ...
             'Normal-depth initialization requires a positive downstream slope.');
     end
-    target_conveyance = input.base_discharge_m3s / sqrt(input.downstream.slope);
+    local_slope = ([face_sections(1:end-1).invert_elevation_m].' - ...
+        [face_sections(2:end).invert_elevation_m].') ./ diff(input.face_x_m(:));
+    if any(local_slope <= 0)
+        error('hydrohp:InvalidInitialization', ...
+            'Normal-depth initialization requires a positive local bed slope in every cell.');
+    end
+    target_conveyance = input.base_discharge_m3s ./ sqrt(local_slope);
     area = zeros(cell_count, 1);
     for index = 1:cell_count
         table_data = sections(index).table;
-        if target_conveyance > table_data.conveyance_m3s(end)
+        if target_conveyance(index) > table_data.conveyance_m3s(end)
             error('hydrohp:InitializationOutsideSectionRange', ...
                 'Base flow exceeds the conveyance range at x = %.6g m.', sections(index).x_m);
         end
         area(index) = interp1(table_data.conveyance_m3s, ...
-            table_data.area_m2, target_conveyance, 'pchip');
+            table_data.area_m2, target_conveyance(index), 'pchip');
     end
 elseif initialization_type == "stage"
     stage = input.initial_stage_m;
@@ -219,7 +226,8 @@ while time_s < duration_s
     end
     accepted = false;
     while ~accepted
-        boundary = make_boundary(input.downstream, forcing(time_s + dt_s / 2));
+        boundary = make_boundary(input.downstream, ...
+            forcing(time_s + dt_s / 2), input.initialization_type);
         try
             [area_new, discharge_new, diagnostic] = hydrohp_varying_step( ...
                 cell_sections, face_sections, area, discharge, dx_m, dt_s, ...
@@ -234,7 +242,10 @@ while time_s < duration_s
             dt_s = dt_s / 2;
             if dt_s < input.minimum_dt_s
                 error('hydrohp:MinimumTimeStep', ...
-                    'CFL control requires dt below minimum_dt_s at t = %.6g s.', time_s);
+                    ['CFL control requires dt below minimum_dt_s at t = %.6g s. ' ...
+                    'First-cell area/discharge are %.6g m2 and %.6g m3/s. ' ...
+                    'Last diagnostic: %s'], time_s, area(1), discharge(1), ...
+                    exception.message);
             end
         end
     end
@@ -284,12 +295,22 @@ ledger = struct( ...
         initial_storage_m3 + abs(cumulative_inflow_m3), eps));
 end
 
-function boundary = make_boundary(downstream, upstream_discharge)
+function boundary = make_boundary( ...
+        downstream, upstream_discharge, initialization_type)
 boundary = struct('upstream_discharge_m3s', upstream_discharge, ...
+    'upstream_state_type', upstream_state_type(initialization_type), ...
     'downstream_type', lower(string(downstream.type)));
 if boundary.downstream_type == "normal_depth"
     boundary.downstream_slope = downstream.slope;
 elseif boundary.downstream_type == "stage"
     boundary.downstream_stage_m = downstream.stage_m;
+end
+end
+
+function state_type = upstream_state_type(initialization_type)
+if lower(string(initialization_type)) == "normal_depth"
+    state_type = "local_depth";
+else
+    state_type = "stage";
 end
 end

@@ -54,6 +54,16 @@ assert(all(isfinite([area; discharge])) && all(area >= 0));
 assert(any(area([cells.x_m].' >= 50) > 0));
 assert(abs((final_volume - initial_volume) - total_adjustment) < 1e-9);
 
+% A prescribed inflow must wet a dry upstream face at critical depth.
+area = zeros(size(area));
+discharge = zeros(size(discharge));
+boundary = struct('upstream_discharge_m3s', 1, ...
+    'upstream_state_type', "local_depth");
+[~, ~, diagnostic] = hydrohp_varying_step( ...
+    cells, faces, area, discharge, dx_m, 0.001, ...
+    include_friction=false, cfl_target=0.7, boundary=boundary);
+assert(abs(diagnostic.boundary_inflow_volume_m3 - 0.001) < 1e-14);
+
 % The local conveyance table must damp a moving wet state when friction is on.
 uniform_stage = ones(numel(cells), 1);
 uniform_area = areas_at_stage(cells, uniform_stage);
@@ -68,7 +78,8 @@ assert(abs(with_friction(10)) < abs(no_friction(10)));
 
 % Unsafe time steps must fail explicitly.
 try
-    hydrohp_varying_step(cells, faces, area, discharge, dx_m, 100, ...
+    hydrohp_varying_step( ...
+        cells, faces, uniform_area, uniform_discharge, dx_m, 100, ...
         include_friction=false, cfl_target=0.7);
     error('hydrohp:TestFailed', 'An unsafe CFL step was accepted.');
 catch exception

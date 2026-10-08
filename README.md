@@ -20,9 +20,11 @@ geometry. The new step preserves a lake at rest and records CFL and wet/dry
 volume diagnostics; it is not yet connected to the public run interface.
 
 `hydrohp_run_varying(input)` provides the experimental H6 run path for those
-tables. It supports a discharge-hydrograph inlet, characteristic subcritical
-boundaries, normal-depth or fixed-stage downstream closure, optional base-flow
-spin-up, adaptive CFL stepping, and a run-level mass ledger. The established
+tables. It supports a discharge-hydrograph inlet with local-depth extrapolation
+and a critical-depth fallback for dry or supercritical entry, normal-depth or
+fixed-stage downstream closure, optional base-flow spin-up, adaptive CFL
+stepping, and a run-level mass ledger. Normal-depth initialization uses the
+local bed slope of each cell. The established
 `hydrohp_run` interface still uses the unchanged V5 numerical path.
 
 The current V5 irregular-section path uses one profile throughout the modeled
