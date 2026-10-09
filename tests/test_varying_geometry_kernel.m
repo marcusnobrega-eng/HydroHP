@@ -16,6 +16,27 @@ assert(max(abs(area_next - area)) < 1e-13);
 assert(max(abs(discharge_next)) < 1e-12);
 assert(abs(diagnostic.storage_change_m3) < 1e-12);
 
+% Face stages within one table interval are clamped and reported.
+clipped_faces = faces;
+clipped_faces(2).maximum_water_surface_elevation_m = stage_m(1) - 0.001;
+[~, ~, clipped] = hydrohp_varying_step( ...
+    cells, clipped_faces, area, discharge, dx_m, 0.05, ...
+    include_friction=false, cfl_target=0.8);
+assert(clipped.stage_endpoint_clamp_count == 2);
+assert(abs(clipped.maximum_stage_endpoint_excess_m - 0.001) < 1e-9, ...
+    'Maximum recorded endpoint excess is %.12g m.', ...
+    clipped.maximum_stage_endpoint_excess_m);
+
+% Larger exceedances remain explicit errors.
+clipped_faces(2).maximum_water_surface_elevation_m = stage_m(1) - 0.03;
+try
+    hydrohp_varying_step(cells, clipped_faces, area, discharge, dx_m, 0.05, ...
+        include_friction=false, cfl_target=0.8);
+    error('hydrohp:TestFailed', 'A stage beyond one table interval was accepted.');
+catch exception
+    assert(strcmp(exception.identifier, 'hydrohp:StageOutsideSectionRange'));
+end
+
 % A small wave must cross the contraction without losing closed-domain volume.
 x = [cells.x_m].';
 stage_m = 1.0 + 0.08 * exp(-((x - 25) / 8).^2);

@@ -30,6 +30,8 @@ assert(constant.ledger.maximum_cfl_number <= constant.metadata.cfl_target);
 assert(constant.ledger.minimum_accepted_dt_s > 0);
 assert(constant.ledger.minimum_accepted_dt_s <= constant.metadata.maximum_dt_s);
 assert(constant.ledger.step_count == numel(constant.time_s) - 1);
+assert(isfield(constant.ledger, 'stage_endpoint_clamp_count'));
+assert(isfield(constant.ledger, 'maximum_stage_endpoint_excess_m'));
 assert(all(isfinite([constant.area_m2(:); constant.discharge_m3s(:)])));
 
 % A piecewise-linear hydrograph must enter with its exact integrated volume.
