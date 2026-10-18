@@ -18,6 +18,12 @@ base = struct( ...
 input = base;
 input.hydrograph_time_s = [0; 20];
 input.hydrograph_discharge_m3s = [1; 1];
+diagnostic_root = string(tempname);
+mkdir(diagnostic_root);
+diagnostic_cleanup = onCleanup(@() rmdir(diagnostic_root, 's'));
+input.progress_file = fullfile(diagnostic_root, "progress.tsv");
+input.checkpoint_file = fullfile(diagnostic_root, "checkpoint.mat");
+input.diagnostic_wall_interval_s = 3600;
 constant = hydrohp_run_varying(input);
 assert(constant.initialization.converged);
 assert(constant.initialization.relative_state_change_rate_per_s < 1e-4);
@@ -33,6 +39,13 @@ assert(constant.ledger.step_count == numel(constant.time_s) - 1);
 assert(isfield(constant.ledger, 'stage_endpoint_clamp_count'));
 assert(isfield(constant.ledger, 'maximum_stage_endpoint_excess_m'));
 assert(all(isfinite([constant.area_m2(:); constant.discharge_m3s(:)])));
+progress_text = fileread(input.progress_file);
+assert(contains(progress_text, "spinup"));
+assert(contains(progress_text, "event"));
+saved = load(input.checkpoint_file, 'checkpoint');
+assert(saved.checkpoint.phase == "event");
+assert(saved.checkpoint.model_time_s == input.duration_s);
+assert(saved.checkpoint.ledger.step_count == constant.ledger.step_count);
 
 % A piecewise-linear hydrograph must enter with its exact integrated volume.
 input = base;
