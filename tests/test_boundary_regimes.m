@@ -131,6 +131,18 @@ boundary = struct('upstream_discharge_m3s', 2, 'upstream_state_type', "local_dep
 assert(diagnostic.downstream_boundary_code == 1);
 assert(abs(diagnostic.face_mass_flux_m3s(end)) < 1e-3);
 
+% Supercritical flow back toward the interior at the outlet reflects; the
+% outlet never imports water.
+area(end) = area(end - 1);
+backflow = 2 * ones(size(area));
+backflow(end) = -3 * area(end);    % u = -3 m/s, faster than c at 0.3 m depth
+[~, ~, diagnostic] = hydrohp_varying_step_compiled(geometry, area, backflow, ...
+    mild.face_x_m(2) - mild.face_x_m(1), 0.01, boundary=boundary, ...
+    boundary_formulation="regime", reconstruction="hydrostatic", ...
+    return_face_mass_flux=true);
+assert(diagnostic.downstream_boundary_code == 4);
+assert(abs(diagnostic.face_mass_flux_m3s(end)) < 1e-12);
+
 % The reference kernel has only the legacy boundaries.
 event.kernel = "reference";
 event.reconstruction = "stage";

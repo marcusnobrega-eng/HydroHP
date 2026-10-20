@@ -700,12 +700,22 @@ function [flux, speed, code] = downstream_flux_regime( ...
 %   code 3  subcritical interior but no subcritical normal-depth state (a
 %           steep outlet): critical-depth control, Q = A c(A), with the
 %           outgoing characteristic.
+%   code 4  supercritical flow toward the interior: reflective wall, so the
+%           outlet never imports water.
 [inner_phi, inner_celerity] = characteristic_values(section, inner.area_m2, g);
 inner_velocity = safe_velocity(inner_discharge, inner.area_m2, minimum_area);
 if inner_velocity - inner_celerity >= 0
     flux = physical_flux(inner, inner_discharge, g, minimum_area);
     speed = abs(inner_velocity) + inner_celerity;
     code = 1;
+    return
+end
+if inner_velocity + inner_celerity <= 0 && inner.area_m2 > minimum_area
+    % Supercritical flow back toward the interior would need water from
+    % outside the reach. The outlet never supplies water: it reflects.
+    [flux, speed] = hll_flux_vector(inner, inner, inner_discharge, ...
+        -inner_discharge, g, minimum_area);
+    code = 4;
     return
 end
 try

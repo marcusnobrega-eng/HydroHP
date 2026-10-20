@@ -415,7 +415,7 @@ end
 
 overtopping = struct([]);
 upstream_code_counts = zeros(1, 4);    % codes 0..3
-downstream_code_counts = zeros(1, 3);  % codes 1..3
+downstream_code_counts = zeros(1, 4);  % codes 1..4
 while time_s < duration_s
     dt_s = min(candidate_dt_s, duration_s - time_s);
     next_break = input.hydrograph_time_s(find( ...
@@ -581,7 +581,8 @@ if input.boundary_formulation == "regime"
         'upstream_two_condition_fallback', upstream_code_counts(4), ...
         'downstream_free_outflow', downstream_code_counts(1), ...
         'downstream_rating', downstream_code_counts(2), ...
-        'downstream_critical_control', downstream_code_counts(3));
+        'downstream_critical_control', downstream_code_counts(3), ...
+        'downstream_wall', downstream_code_counts(4));
 end
 history = struct();
 if record
