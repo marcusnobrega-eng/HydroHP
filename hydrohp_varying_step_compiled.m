@@ -694,7 +694,8 @@ end
 function [flux, speed, code] = downstream_flux_regime( ...
         section, inner, inner_discharge, boundary, g, minimum_area)
 % P1 outlet rule:
-%   code 1  supercritical (or dry) interior: free outflow;
+%   code 1  supercritical, dry, or near-dry interior (shallower than the
+%           first wet table level): free outflow;
 %   code 2  subcritical with a subcritical normal-depth (or stage) state;
 %   code 3  subcritical interior but no subcritical normal-depth state (a
 %           steep outlet): critical-depth control, Q = A c(A), with the
@@ -722,10 +723,20 @@ invariant_plus = inner_velocity + inner_phi;
 areas = section.table.area_m2;
 areas = areas(areas > minimum_area & section.table.top_width_m > 0);
 values = critical_residual(section, areas, invariant_plus, g);
+if values(1) > 0
+    % The interior is shallower than the first wet table level, so no
+    % critical state lies within the table: the near-dry interior state
+    % leaves freely (its flux is close to zero).
+    flux = physical_flux(inner, inner_discharge, g, minimum_area);
+    speed = abs(inner_velocity) + inner_celerity;
+    code = 1;
+    return
+end
 change = find(values(1:end-1) .* values(2:end) <= 0, 1, 'first');
 if isempty(change)
-    error('hydrohp:BoundaryStateUnavailable', ...
-        'No critical-control outlet state exists within the section table.');
+    error('hydrohp:BoundaryOutsideSectionRange', ...
+        'The critical-control outlet state exceeds the outlet section range at x = %.6g m.', ...
+        section.x_m);
 end
 area = fzero(@(value) critical_residual(section, value, invariant_plus, g), ...
     [areas(change), areas(change + 1)]);

@@ -108,6 +108,29 @@ assert(choked.ledger.boundary_steps.upstream_two_condition_fallback > 0);
 assert(choked.ledger.wet_dry_adjustment_m3 == 0);
 assert(abs(choked.ledger.relative_residual) < 1e-12);
 
+% A near-dry, motionless outlet cell (shallower than the first wet table
+% level) leaves freely instead of stopping the step.
+cells = hydrohp_map_sections_to_grid(mild.section_data, ...
+    0.5 * (mild.face_x_m(1:end-1) + mild.face_x_m(2:end)));
+faces = hydrohp_map_sections_to_grid(mild.section_data, mild.face_x_m);
+geometry = hydrohp_compile_geometry(cells, faces);
+area = zeros(numel(cells), 1);
+for index = 1:numel(cells)
+    area(index) = interp1(cells(index).table.depth_m, ...
+        cells(index).table.area_m2, 0.3, 'pchip');
+end
+discharge = 2 * ones(size(area));
+area(end) = interp1(cells(end).table.depth_m, cells(end).table.area_m2, 0.005, 'pchip');
+discharge(end) = 0;
+boundary = struct('upstream_discharge_m3s', 2, 'upstream_state_type', "local_depth", ...
+    'downstream_type', "normal_depth", 'downstream_slope', 0.003);
+[~, ~, diagnostic] = hydrohp_varying_step_compiled(geometry, area, discharge, ...
+    mild.face_x_m(2) - mild.face_x_m(1), 0.1, boundary=boundary, ...
+    boundary_formulation="regime", reconstruction="hydrostatic", ...
+    return_face_mass_flux=true);
+assert(diagnostic.downstream_boundary_code == 1);
+assert(abs(diagnostic.face_mass_flux_m3s(end)) < 1e-3);
+
 % The reference kernel has only the legacy boundaries.
 event.kernel = "reference";
 event.reconstruction = "stage";

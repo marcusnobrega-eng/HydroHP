@@ -19,7 +19,7 @@ input = struct( ...
     'steady_tolerance_per_s', 1e-4);
 result = hydrohp_run_varying(input);
 slope = result.initialization.initial_slope;
-assert(slope.nonpositive_cell_count > 0 && slope.nonpositive_cell_count < 30);
+assert(slope.fallback_cell_count > 0 && slope.fallback_cell_count < 30);
 assert(abs(slope.reach_average_slope - 0.001) < 1e-12);
 assert(result.initialization.converged);
 assert(result.initialization.ledger.wet_dry_adjustment_m3 == 0);
@@ -29,7 +29,17 @@ assert(abs(result.ledger.relative_residual) < 1e-11);
 % A downhill bed records no fallback cells.
 input.section_data = sections([0.10; 0.05; 0]);
 downhill = hydrohp_run_varying(input);
-assert(downhill.initialization.initial_slope.nonpositive_cell_count == 0);
+assert(downhill.initialization.initial_slope.fallback_cell_count == 0);
+
+% A nearly flat stretch whose base-flow normal depth lies beyond the
+% section table also starts from the reach-average slope.
+flat_input = input;
+flat_input.section_data = sections([0.10; 1e-9; 0]);
+flat_input.steady_tolerance_per_s = 1e9;
+flat = hydrohp_run_varying(flat_input);
+assert(flat.initialization.initial_slope.fallback_cell_count > 0);
+assert(flat.status == "completed");
+assert(flat.initialization.ledger.wet_dry_adjustment_m3 == 0);
 
 % A reach that rises overall has no normal-depth starting state.
 input.section_data = sections([0; 0.05; 0.10]);
@@ -41,10 +51,10 @@ catch exception
     assert(strcmp(exception.identifier, 'hydrohp:InvalidInitialization'));
 end
 
-metrics = struct('pool_fallback_cells', slope.nonpositive_cell_count, ...
+metrics = struct('pool_fallback_cells', slope.fallback_cell_count, ...
     'spinup_change_rate_per_s', result.initialization.relative_state_change_rate_per_s);
 fprintf('HydroHP pool-initialization checks passed: %d fallback cells, converged.\n', ...
-    slope.nonpositive_cell_count);
+    slope.fallback_cell_count);
 end
 
 function data = sections(invert_m)

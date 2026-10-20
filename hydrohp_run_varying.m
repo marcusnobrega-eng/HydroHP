@@ -265,7 +265,7 @@ end
 
 function [area, discharge, slope_record] = initial_state(sections, face_sections, input)
 cell_count = numel(sections);
-slope_record = struct('nonpositive_cell_count', 0, 'reach_average_slope', NaN);
+slope_record = struct('fallback_cell_count', 0, 'reach_average_slope', NaN);
 discharge = input.base_discharge_m3s * ones(cell_count, 1);
 initialization_type = lower(string(input.initialization_type));
 if initialization_type == "normal_depth"
@@ -276,15 +276,19 @@ if initialization_type == "normal_depth"
     end
     local_slope = ([face_sections(1:end-1).invert_elevation_m].' - ...
         [face_sections(2:end).invert_elevation_m].') ./ diff(input.face_x_m(:));
-    % Natural beds have pools where the local slope is not positive and a
-    % normal depth does not exist. Those cells start from the normal depth
-    % at the reach-average slope; the spin-up then relaxes the whole reach
-    % to its steady state. The starting guess is all this rule affects.
-    nonpositive = local_slope <= 0;
+    % Natural beds have pools where the local slope is not positive, or so
+    % flat that the base-flow normal depth lies beyond the section table, so
+    % no normal depth exists in the section. Those cells start from the
+    % normal depth at the reach-average slope; the spin-up then relaxes the
+    % whole reach to its steady state. The starting guess is all this rule
+    % affects.
+    maximum_conveyance = arrayfun(@(item) item.table.conveyance_m3s(end), sections);
+    nonpositive = local_slope <= 0 | ...
+        input.base_discharge_m3s ./ sqrt(max(local_slope, realmin)) > maximum_conveyance;
     reach_slope = (face_sections(1).invert_elevation_m - ...
         face_sections(end).invert_elevation_m) / ...
         (input.face_x_m(end) - input.face_x_m(1));
-    slope_record = struct('nonpositive_cell_count', sum(nonpositive), ...
+    slope_record = struct('fallback_cell_count', sum(nonpositive), ...
         'reach_average_slope', reach_slope);
     if any(nonpositive)
         if reach_slope <= 0
