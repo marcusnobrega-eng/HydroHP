@@ -7,6 +7,18 @@ function [area_new, discharge_new, diagnostics] = hydrohp_varying_step_compiled(
 % are evaluated for all locations at once; the two boundary faces use the
 % scalar boundary solvers of the reference kernel. The reference kernel is
 % kept unchanged so tests can require identical results.
+%
+% reconstruction = "stage" (default) reconstructs both neighbours of an
+% interior face from their water-surface elevation on the face section,
+% exactly as the reference kernel. reconstruction = "hydrostatic" applies
+% the first-order hydrostatic reconstruction of Audusse et al. (2004): the
+% face bed is max(z_L, z_R) of the neighbouring cell inverts and each
+% reconstructed depth is max(0, eta - max(z_L, z_R)), evaluated on the face
+% section. The reconstructed depth never exceeds the cell depth, which
+% restores the positivity argument of the HLL update, and equal surfaces
+% still give equal face states, so lake at rest is preserved. The scheme is
+% known to overestimate depth where the bed drop per cell exceeds the water
+% depth (Delestre et al., 2012); those faces are counted in the diagnostics.
 
 arguments
     geometry (1,1) struct
@@ -21,6 +33,8 @@ arguments
     options.boundary (1,1) struct = struct()
     options.report_negative_area (1,1) logical = false
     options.negative_area_tolerance_m2 (1,1) double {mustBeFinite, mustBeNonnegative} = 1e-10
+    options.reconstruction (1,1) string {mustBeMember(options.reconstruction, ...
+        ["stage", "hydrostatic"])} = "stage"
 end
 
 cell_count = geometry.cell_count;
@@ -53,8 +67,26 @@ velocity(wet_cell) = discharge_m3s(wet_cell) ./ area_m2(wet_cell);
 
 % Interior faces 2..N: both neighbours reconstructed on the face geometry.
 interior = (2:cell_count).';
-[left, left_excess_m] = reconstruct(faces, interior, stage(interior - 1));
-[right, right_excess_m] = reconstruct(faces, interior, stage(interior));
+if options.reconstruction == "stage"
+    left_query = stage(interior - 1);
+    right_query = stage(interior);
+else
+    face_bed = max(cells.invert_elevation_m(interior - 1), ...
+        cells.invert_elevation_m(interior));
+    left_depth = max(stage(interior - 1) - face_bed, 0);
+    right_depth = max(stage(interior) - face_bed, 0);
+    face_invert = faces.invert_elevation_m(interior);
+    left_query = face_invert + left_depth;
+    right_query = face_invert + right_depth;
+    cell_depth = stage - cells.invert_elevation_m;
+    bed_drop = cells.invert_elevation_m(interior) - ...
+        cells.invert_elevation_m(interior - 1);
+    steep_shallow_face_count = sum( ...
+        (bed_drop >= cell_depth(interior - 1) & cell_depth(interior - 1) > 0) | ...
+        (-bed_drop >= cell_depth(interior) & cell_depth(interior) > 0));
+end
+[left, left_excess_m] = reconstruct(faces, interior, left_query);
+[right, right_excess_m] = reconstruct(faces, interior, right_query);
 q_left = velocity(interior - 1) .* left.area_m2;
 q_right = velocity(interior) .* right.area_m2;
 [interior_flux, interior_speed] = hll_flux_vector( ...
@@ -161,6 +193,9 @@ diagnostics = struct( ...
     'maximum_stage_endpoint_excess_m', maximum_stage_endpoint_excess_m, ...
     'storage_change_m3', sum(area_new - area_m2) * dx_m, ...
     'geometric_source_m4_s2', geometric_source);
+if options.reconstruction == "hydrostatic"
+    diagnostics.steep_shallow_face_count = steep_shallow_face_count;
+end
 
 % Opt-in P0.1 diagnostic: describe raw areas below -tolerance before they are
 % clipped. It reads the step's intermediate values and never changes them.
