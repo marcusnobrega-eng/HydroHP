@@ -36,6 +36,8 @@ arguments
     options.reconstruction (1,1) string {mustBeMember(options.reconstruction, ...
         ["stage", "hydrostatic"])} = "stage"
     options.return_face_mass_flux (1,1) logical = false
+    options.boundary_formulation (1,1) string {mustBeMember( ...
+        options.boundary_formulation, ["legacy", "regime"])} = "legacy"
 end
 
 cell_count = geometry.cell_count;
@@ -99,7 +101,15 @@ upstream_section = geometry.upstream_face;
     upstream_section, cells.invert_elevation_m(1), stage(1), ...
     options.boundary, "upstream");
 upstream_inner_discharge = velocity(1) * upstream_inner.area_m2;
-if isfield(options.boundary, 'upstream_discharge_m3s')
+upstream_code = NaN;
+downstream_code = NaN;
+regime = options.boundary_formulation == "regime";
+if regime && isfield(options.boundary, 'upstream_discharge_m3s')
+    inlet_slope = (faces.invert_elevation_m(1) - faces.invert_elevation_m(2)) / dx_m;
+    [upstream_flux_value, upstream_speed, upstream_code] = upstream_flux_regime( ...
+        upstream_section, upstream_inner, upstream_inner_discharge, ...
+        options.boundary.upstream_discharge_m3s, inlet_slope, g, minimum_area);
+elseif isfield(options.boundary, 'upstream_discharge_m3s')
     [upstream_flux_value, upstream_speed] = upstream_flux( ...
         upstream_section, upstream_inner, upstream_inner_discharge, ...
         options.boundary.upstream_discharge_m3s, ...
@@ -115,7 +125,11 @@ downstream_section = geometry.downstream_face;
     downstream_section, cells.invert_elevation_m(cell_count), ...
     stage(cell_count), options.boundary, "downstream");
 downstream_inner_discharge = velocity(cell_count) * downstream_inner.area_m2;
-if isfield(options.boundary, 'downstream_type')
+if regime && isfield(options.boundary, 'downstream_type')
+    [downstream_flux_value, downstream_speed, downstream_code] = ...
+        downstream_flux_regime(downstream_section, downstream_inner, ...
+        downstream_inner_discharge, options.boundary, g, minimum_area);
+elseif isfield(options.boundary, 'downstream_type')
     [downstream_flux_value, downstream_speed] = downstream_flux( ...
         downstream_section, downstream_inner, downstream_inner_discharge, ...
         options.boundary, g, minimum_area);
@@ -199,6 +213,10 @@ if options.reconstruction == "hydrostatic"
 end
 if options.return_face_mass_flux
     diagnostics.face_mass_flux_m3s = flux(:, 1);
+end
+if regime
+    diagnostics.upstream_boundary_code = upstream_code;
+    diagnostics.downstream_boundary_code = downstream_code;
 end
 
 % Opt-in P0.1 diagnostic: describe raw areas below -tolerance before they are
@@ -570,6 +588,134 @@ state = solve_subcritical_state( ...
 flux = physical_flux(state, prescribed_discharge, g, minimum_area);
 speed = abs(safe_velocity(prescribed_discharge, state.area_m2, minimum_area)) + ...
     wave_celerity(state, g, minimum_area);
+end
+
+function [flux, speed, code] = upstream_flux_regime( ...
+        section, inner, inner_discharge, discharge, slope, g, minimum_area)
+% P1 inflow rule. The number of imposed conditions follows the regime of the
+% normal-depth state for the prescribed discharge on the inlet bed slope:
+%   code 1  supercritical normal state: discharge and normal area imposed;
+%   code 2  subcritical: discharge imposed, area from the outgoing
+%           characteristic of the interior state;
+%   code 3  two conditions because the interior offers no outgoing
+%           characteristic (dry, or supercritical while the normal state is
+%           subcritical): normal area when the inlet cell is dry, critical
+%           area otherwise;
+%   code 0  zero discharge: reflective wall.
+if ~isscalar(discharge) || ~isfinite(discharge) || discharge < 0
+    error('hydrohp:InvalidUpstreamDischarge', ...
+        'The prescribed upstream discharge must be a finite nonnegative scalar.');
+end
+if discharge == 0
+    [flux, speed] = hll_flux_vector(inner, inner, -inner_discharge, ...
+        inner_discharge, g, minimum_area);
+    code = 0;
+    return
+end
+normal = struct([]);
+normal_froude = NaN;
+if slope > 0
+    normal = state_from_area(section, normal_area(section, discharge, slope));
+    normal_froude = abs(discharge / normal.area_m2) / ...
+        max(wave_celerity(normal, g, minimum_area), eps);
+end
+inner_dry = inner.area_m2 <= minimum_area;
+inner_supercritical = ~inner_dry && ...
+    safe_velocity(inner_discharge, inner.area_m2, minimum_area) - ...
+    wave_celerity(inner, g, minimum_area) >= 0;
+if normal_froude >= 1
+    state = normal;
+    code = 1;
+elseif inner_dry || inner_supercritical
+    if inner_dry && ~isempty(normal)
+        state = normal;
+    else
+        state = critical_state(section, discharge, g, minimum_area);
+    end
+    code = 3;
+else
+    [inner_phi, ~] = characteristic_values(section, inner.area_m2, g);
+    invariant_minus = safe_velocity(inner_discharge, inner.area_m2, ...
+        minimum_area) - inner_phi;
+    residual = @(area) discharge ./ area - ...
+        characteristic_values(section, area, g) - invariant_minus;
+    state = solve_subcritical_state(section, residual, ...
+        @(area) discharge + zeros(size(area)), inner.area_m2, g, minimum_area);
+    code = 2;
+end
+flux = physical_flux(state, discharge, g, minimum_area);
+speed = abs(safe_velocity(discharge, state.area_m2, minimum_area)) + ...
+    wave_celerity(state, g, minimum_area);
+end
+
+function area = normal_area(section, discharge, slope)
+% Smallest area whose Manning conveyance carries the discharge at the slope.
+required = discharge / sqrt(slope);
+conveyance = section.table.conveyance_m3s;
+upper = find(conveyance >= required, 1, 'first');
+if isempty(upper)
+    error('hydrohp:BoundaryOutsideSectionRange', ...
+        'The normal-depth inflow state exceeds the inlet section range at x = %.6g m.', ...
+        section.x_m);
+end
+areas = section.table.area_m2;
+if upper == 1
+    area = areas(1);
+    return
+end
+area = fzero(@(value) conveyance_at_area(section, value) - required, ...
+    [areas(upper - 1), areas(upper)]);
+end
+
+function [flux, speed, code] = downstream_flux_regime( ...
+        section, inner, inner_discharge, boundary, g, minimum_area)
+% P1 outlet rule:
+%   code 1  supercritical (or dry) interior: free outflow;
+%   code 2  subcritical with a subcritical normal-depth (or stage) state;
+%   code 3  subcritical interior but no subcritical normal-depth state (a
+%           steep outlet): critical-depth control, Q = A c(A), with the
+%           outgoing characteristic.
+[inner_phi, inner_celerity] = characteristic_values(section, inner.area_m2, g);
+inner_velocity = safe_velocity(inner_discharge, inner.area_m2, minimum_area);
+if inner_velocity - inner_celerity >= 0
+    flux = physical_flux(inner, inner_discharge, g, minimum_area);
+    speed = abs(inner_velocity) + inner_celerity;
+    code = 1;
+    return
+end
+try
+    [flux, speed] = downstream_flux(section, inner, inner_discharge, ...
+        boundary, g, minimum_area);
+    code = 2;
+    return
+catch exception
+    if ~strcmp(exception.identifier, 'hydrohp:BoundaryStateUnavailable') || ...
+            lower(string(boundary.downstream_type)) ~= "normal_depth"
+        rethrow(exception)
+    end
+end
+invariant_plus = inner_velocity + inner_phi;
+areas = section.table.area_m2;
+areas = areas(areas > minimum_area & section.table.top_width_m > 0);
+values = critical_residual(section, areas, invariant_plus, g);
+change = find(values(1:end-1) .* values(2:end) <= 0, 1, 'first');
+if isempty(change)
+    error('hydrohp:BoundaryStateUnavailable', ...
+        'No critical-control outlet state exists within the section table.');
+end
+area = fzero(@(value) critical_residual(section, value, invariant_plus, g), ...
+    [areas(change), areas(change + 1)]);
+state = state_from_area(section, area);
+discharge = state.area_m2 * wave_celerity(state, g, minimum_area);
+flux = physical_flux(state, discharge, g, minimum_area);
+speed = abs(safe_velocity(discharge, state.area_m2, minimum_area)) + ...
+    wave_celerity(state, g, minimum_area);
+code = 3;
+end
+
+function residual = critical_residual(section, area, invariant_plus, g)
+[phi, celerity] = characteristic_values(section, area, g);
+residual = celerity + phi - invariant_plus;
 end
 
 function state = critical_state(section, discharge, g, minimum_area)

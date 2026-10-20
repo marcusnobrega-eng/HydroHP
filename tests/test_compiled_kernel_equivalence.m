@@ -129,6 +129,7 @@ end
 function compare_run(input)
 % The reference kernel implements stage reconstruction only.
 input.reconstruction = "stage";
+input.boundary_formulation = "legacy";
 input.kernel = "reference";
 reference = hydrohp_run_varying(input);
 input.kernel = "compiled";
