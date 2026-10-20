@@ -41,6 +41,25 @@ assert(flat.initialization.initial_slope.fallback_cell_count > 0);
 assert(flat.status == "completed");
 assert(flat.initialization.ledger.wet_dry_adjustment_m3 == 0);
 
+% A spin-up that has not settled stops the run by default, and with
+% steady_initialization = "report" it is recorded and the event still runs.
+short = input;
+short.section_data = sections([0.10; 0.14; 0]);
+short.spinup_duration_s = 5;
+short.steady_tolerance_per_s = 1e-12;
+identifier = "";
+try
+    hydrohp_run_varying(short);
+catch exception
+    identifier = string(exception.identifier);
+end
+assert(identifier == "hydrohp:SteadyInitializationFailed");
+short.steady_initialization = "report";
+reported = hydrohp_run_varying(short);
+assert(~reported.initialization.converged);
+assert(reported.status == "completed");
+assert(reported.metadata.steady_initialization == "report");
+
 % A reach that rises overall has no normal-depth starting state.
 input.section_data = sections([0; 0.05; 0.10]);
 input.downstream.slope = 0.001;
