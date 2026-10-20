@@ -597,10 +597,10 @@ function [flux, speed, code] = upstream_flux_regime( ...
 %   code 1  supercritical normal state: discharge and normal area imposed;
 %   code 2  subcritical: discharge imposed, area from the outgoing
 %           characteristic of the interior state;
-%   code 3  two conditions because the interior offers no outgoing
-%           characteristic (dry, or supercritical while the normal state is
-%           subcritical): normal area when the inlet cell is dry, critical
-%           area otherwise;
+%   code 3  two conditions: the interior offers no outgoing characteristic
+%           (dry, or supercritical while the normal state is subcritical),
+%           or no subcritical state admits the discharge (choked inflow);
+%           normal area when the inlet cell is dry, critical area otherwise;
 %   code 0  zero discharge: reflective wall.
 if ~isscalar(discharge) || ~isfinite(discharge) || discharge < 0
     error('hydrohp:InvalidUpstreamDischarge', ...
@@ -630,7 +630,7 @@ elseif inner_dry || inner_supercritical
     if inner_dry && ~isempty(normal)
         state = normal;
     else
-        state = critical_state(section, discharge, g, minimum_area);
+        state = critical_inflow_state(section, discharge, g, minimum_area);
     end
     code = 3;
 else
@@ -639,13 +639,37 @@ else
         minimum_area) - inner_phi;
     residual = @(area) discharge ./ area - ...
         characteristic_values(section, area, g) - invariant_minus;
-    state = solve_subcritical_state(section, residual, ...
-        @(area) discharge + zeros(size(area)), inner.area_m2, g, minimum_area);
-    code = 2;
+    try
+        state = solve_subcritical_state(section, residual, ...
+            @(area) discharge + zeros(size(area)), inner.area_m2, g, minimum_area);
+        code = 2;
+    catch exception
+        if ~strcmp(exception.identifier, 'hydrohp:BoundaryStateUnavailable')
+            rethrow(exception)
+        end
+        % No subcritical state can admit this discharge against the outgoing
+        % characteristic: the inflow chokes and enters at critical depth.
+        state = critical_inflow_state(section, discharge, g, minimum_area);
+        code = 3;
+    end
 end
 flux = physical_flux(state, discharge, g, minimum_area);
 speed = abs(safe_velocity(discharge, state.area_m2, minimum_area)) + ...
     wave_celerity(state, g, minimum_area);
+end
+
+function state = critical_inflow_state(section, discharge, g, minimum_area)
+% Critical inflow state; a critical area beyond the inlet table is overtopping.
+try
+    state = critical_state(section, discharge, g, minimum_area);
+catch exception
+    if strcmp(exception.identifier, 'hydrohp:BoundaryStateUnavailable')
+        error('hydrohp:BoundaryOutsideSectionRange', ...
+            'The critical inflow state exceeds the inlet section range at x = %.6g m.', ...
+            section.x_m);
+    end
+    rethrow(exception)
+end
 end
 
 function area = normal_area(section, discharge, slope)

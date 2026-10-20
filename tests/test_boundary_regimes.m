@@ -91,6 +91,23 @@ assert(counts.downstream_free_outflow > 0 && counts.downstream_rating > 0 && ...
 assert(result.ledger.wet_dry_adjustment_m3 == 0);
 assert(abs(result.ledger.relative_residual) < 1e-12);
 
+% A sharp rise on a mild inlet admits no subcritical inflow state against
+% the outgoing characteristic: the inflow chokes and enters at critical
+% depth instead of stopping the run.
+choke = channel_input(trapezoid(8, 6, 8, 0.003), 0.003, 40);
+choke.hydrograph_time_s = [0; 10; 1200];
+choke.hydrograph_discharge_m3s = [0.5; 80; 80];
+choke.base_discharge_m3s = 0.5;
+choke.duration_s = 1200;
+choke.spinup_duration_s = 600;
+choke.maximum_dt_s = 2;
+choke.output_interval_s = 60;
+choked = hydrohp_run_varying(choke);
+assert(choked.status == "completed");
+assert(choked.ledger.boundary_steps.upstream_two_condition_fallback > 0);
+assert(choked.ledger.wet_dry_adjustment_m3 == 0);
+assert(abs(choked.ledger.relative_residual) < 1e-12);
+
 % The reference kernel has only the legacy boundaries.
 event.kernel = "reference";
 event.reconstruction = "stage";
