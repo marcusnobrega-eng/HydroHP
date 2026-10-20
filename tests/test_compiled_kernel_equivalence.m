@@ -134,6 +134,13 @@ compiled = hydrohp_run_varying(input);
 assert(compiled.metadata.kernel == "compiled");
 reference.metadata = rmfield(reference.metadata, 'kernel');
 compiled.metadata = rmfield(compiled.metadata, 'kernel');
+% Face mass fluxes are reported by the compiled kernel only.
+assert(isempty(reference.maxima.face_mass_flux_abs_m3s) && ...
+    numel(compiled.maxima.face_mass_flux_abs_m3s) == numel(compiled.x_m) + 1);
+reference.maxima = rmfield(reference.maxima, 'face_mass_flux_abs_m3s');
+compiled.maxima = rmfield(compiled.maxima, 'face_mass_flux_abs_m3s');
+reference.probes = rmfield(reference.probes, 'face_mass_flux_m3s');
+compiled.probes = rmfield(compiled.probes, 'face_mass_flux_m3s');
 assert(isequaln(compiled, reference), ...
     'Compiled and reference runs differ.');
 end

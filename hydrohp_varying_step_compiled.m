@@ -35,6 +35,7 @@ arguments
     options.negative_area_tolerance_m2 (1,1) double {mustBeFinite, mustBeNonnegative} = 1e-10
     options.reconstruction (1,1) string {mustBeMember(options.reconstruction, ...
         ["stage", "hydrostatic"])} = "stage"
+    options.return_face_mass_flux (1,1) logical = false
 end
 
 cell_count = geometry.cell_count;
@@ -196,6 +197,9 @@ diagnostics = struct( ...
 if options.reconstruction == "hydrostatic"
     diagnostics.steep_shallow_face_count = steep_shallow_face_count;
 end
+if options.return_face_mass_flux
+    diagnostics.face_mass_flux_m3s = flux(:, 1);
+end
 
 % Opt-in P0.1 diagnostic: describe raw areas below -tolerance before they are
 % clipped. It reads the step's intermediate values and never changes them.
@@ -342,7 +346,10 @@ outside = area_m2 > maximum_area + area_tolerance;
 if any(outside)
     first = find(outside, 1);
     error('hydrohp:AreaOutsideSectionRange', ...
-        'Area %.6g m2 exceeds the local section range.', area_m2(first));
+        ['Area %.6g m2 exceeds the local section range (maximum %.6g m2) ' ...
+        'at cell %d, x = %.6g m; %d cells exceed their range.'], ...
+        area_m2(first), maximum_area(first), first, cells.x_m(first), ...
+        sum(outside));
 end
 area_m2 = min(area_m2, maximum_area);
 interval = find_interval(cells.area_m2, cells.rows, index, area_m2);
