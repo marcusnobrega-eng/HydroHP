@@ -319,6 +319,10 @@ if initialization_type == "normal_depth"
         area(index) = interp1(table_data.conveyance_m3s, ...
             table_data.area_m2, target_conveyance(index), 'pchip');
     end
+elseif initialization_type == "dry"
+    % A dry reach, as in the 2D benchmark: the hydrograph wets it.
+    area = zeros(cell_count, 1);
+    discharge = zeros(cell_count, 1);
 elseif initialization_type == "stage"
     stage = input.initial_stage_m;
     if isscalar(stage)
@@ -342,7 +346,7 @@ elseif initialization_type == "stage"
     end
 else
     error('hydrohp:InvalidInitialization', ...
-        'initialization_type must be "normal_depth" or "stage".');
+        'initialization_type must be "normal_depth", "dry" or "stage".');
 end
 end
 
@@ -824,7 +828,7 @@ end
 end
 
 function state_type = upstream_state_type(initialization_type)
-if lower(string(initialization_type)) == "normal_depth"
+if ismember(lower(string(initialization_type)), ["normal_depth", "dry"])
     state_type = "local_depth";
 else
     state_type = "stage";
