@@ -143,6 +143,9 @@ result.maxima.velocity_m_s       % maximum mean velocity per cell (m/s)
 result.ledger.relative_residual  % volume balance
 ```
 
+`Examples/run_varying_example.m` runs the same case and plots the results.
+The [user manual](docs/user_manual.md) walks through a full run, from
+sections to checks and troubleshooting.
 [docs/inputs_outputs.md](docs/inputs_outputs.md) lists every input, option,
 and output.
 
@@ -209,6 +212,7 @@ matlab -batch "addpath(pwd); addpath('tests'); files = dir('tests/test_*.m'); fo
 | Other root `.m` files | V5 solver, input, hydraulic-property, and postprocessing scripts |
 | `Examples/` | Example inputs for both paths |
 | `tests/` | Test functions |
+| `docs/user_manual.md` | Step-by-step guide to the varying-geometry kernel |
 | `docs/inputs_outputs.md` | Inputs, options, and outputs of the varying-geometry kernel |
 | `docs/cross_section_input.md` | Cross-section table schema and validation rules |
 | `docs/reference/` | Published supplement and hydraulic-property reference figures |
