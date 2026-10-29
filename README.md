@@ -143,7 +143,9 @@ result.maxima.velocity_m_s       % maximum mean velocity per cell (m/s)
 result.ledger.relative_residual  % volume balance
 ```
 
-`Examples/run_varying_example.m` runs the same case and plots the results.
+`hydrohp_postprocess_varying(result, input)` writes the V5 post-processing
+figures, videos, and CSV files for the run, with the same names and format.
+`Examples/run_varying_example.m` runs this case and writes them.
 The [user manual](docs/user_manual.md) walks through a full run, from
 sections to checks and troubleshooting.
 [docs/inputs_outputs.md](docs/inputs_outputs.md) lists every input, option,
@@ -201,6 +203,7 @@ matlab -batch "addpath(pwd); addpath('tests'); files = dir('tests/test_*.m'); fo
 | `test_dry_start` | Dry start, exact inflow volume, volume balance |
 | `test_event_outputs` | Sparse history, online maxima, and probes |
 | `test_overtopping_guard` | Stop and report when water leaves a section |
+| `test_postprocess_varying` | Every post-processing file, CSV values, probe and history sources |
 | `test_h7_regression_package` | Published normal flow and analytical dam break |
 | `test_hydrohp_interface` | Legacy V5 interface from Excel and from a structure |
 
@@ -208,7 +211,7 @@ matlab -batch "addpath(pwd); addpath('tests'); files = dir('tests/test_*.m'); fo
 
 | Path | Contents |
 |---|---|
-| `hydrohp_*.m` | Varying-geometry kernel, section tables, grid mapping, and the callable V5 interface |
+| `hydrohp_*.m` | Varying-geometry kernel, section tables, grid mapping, post-processing, and the callable V5 interface |
 | Other root `.m` files | V5 solver, input, hydraulic-property, and postprocessing scripts |
 | `Examples/` | Example inputs for both paths |
 | `tests/` | Test functions |
@@ -253,7 +256,8 @@ Numerical methods:
 - The varying-geometry runner needs a uniform grid that lies between the first
   and last section chainages.
 - There is no lateral inflow.
-- Velocity is the mean over each cross-section.
+- Velocity is the mean over each cross-section. Near a dry front its maximum
+  can come from water only a few centimetres deep.
 - Hydrostatic reconstruction overestimates depth where the bed drop across a
   face exceeds the water depth (Delestre et al., 2012). The kernel counts
   those faces in its step diagnostics.

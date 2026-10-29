@@ -1,4 +1,5 @@
-% Run the varying-geometry kernel on the three example sections, from dry.
+% Run the varying-geometry kernel on the three example sections, from dry,
+% and write the V5 post-processing products to Modeling_Results.
 repository_root = fileparts(fileparts(mfilename('fullpath')));
 addpath(repository_root);
 
@@ -15,36 +16,18 @@ input = struct( ...
     'initialization_type', "dry", ...
     'output_interval_s', 60, ...
     'probe_x_m', [0; 500; 1000]);
+run_timer = tic;
 result = hydrohp_run_varying(input);
+computational_time_s = toc(run_timer);
 
 fprintf('Status: %s\n', result.status);
 fprintf('Inflow %.1f m3, outflow %.1f m3, storage %.1f m3, relative residual %.2g\n', ...
     result.ledger.cumulative_inflow_m3, result.ledger.cumulative_outflow_m3, ...
     result.ledger.final_storage_m3, result.ledger.relative_residual);
 
-% Bed and section top at the cell centres, from the tables the solver used.
-cell_sections = hydrohp_map_sections_to_grid(section_data, result.x_m);
-bed_m = [cell_sections.invert_elevation_m].';
-top_m = [cell_sections.maximum_water_surface_elevation_m].';
-
-figure('Name', 'Maximum water level');
-plot(result.x_m, top_m, 'k--', result.x_m, result.maxima.stage_m, 'b-', ...
-    result.x_m, bed_m, 'k-', 'LineWidth', 1.2);
-xlabel('Chainage (m)');
-ylabel('Elevation (m)');
-legend('Section top', 'Maximum water level', 'Bed', ...
-    'Location', 'northoutside', 'Orientation', 'horizontal');
-grid on
-
-figure('Name', 'Probe series');
-tiledlayout(2, 1);
-nexttile
-plot(result.probes.time_s / 60, result.probes.face_mass_flux_m3s, 'LineWidth', 1.2);
-ylabel('Discharge (m^3/s)');
-legend(compose('x = %g m', result.probes.x_m), 'Location', 'northeast');
-grid on
-nexttile
-plot(result.probes.time_s / 60, result.probes.depth_m, 'LineWidth', 1.2);
-xlabel('Time (min)');
-ylabel('Depth (m)');
-grid on
+files = hydrohp_postprocess_varying(result, input, ...
+    'output_folder', fullfile(repository_root, 'Modeling_Results'), ...
+    'run_id', "1", 'run_name', "Example_Varying", ...
+    'observation_labels', ["Inlet"; "L/2"; "Outlet"], ...
+    'computational_time_s', computational_time_s);
+disp(files)

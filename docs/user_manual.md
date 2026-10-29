@@ -62,6 +62,7 @@ the command that runs the whole suite.
 | Set the start | `initialization_type` | [8](#8-set-the-initial-state) |
 | Run | `hydrohp_run_varying` | [9](#9-run) |
 | Read and check | `result` | [10](#10-read-the-results), [11](#11-check-the-run) |
+| Write figures, videos, and CSV files | `hydrohp_postprocess_varying` | [10](#post-processing) |
 
 ## 3. Prepare cross-sections
 
@@ -270,6 +271,49 @@ In `result.probes`, discharge and depth come from the nearest cell.
 `face_mass_flux_m3s` comes from the nearest face, so a probe at the first or
 last chainage gives the exact boundary inflow or outflow.
 
+### Post-processing
+
+`hydrohp_postprocess_varying` writes the V5 post-processing products for a
+varying-section run, with the same file names, layouts, and formatting.
+
+```matlab
+files = hydrohp_postprocess_varying(result, input, ...
+    'run_id', "1", 'run_name', "MyReach", ...
+    'observation_labels', ["Inlet"; "L/2"; "Outlet"]);
+```
+
+Each file name starts with `<run_id>_<run_name>_` and goes to
+`Modeling_Results/` unless you set `output_folder`.
+
+| File | Contents |
+|---|---|
+| `Surf_Plots.pdf` | Froude number, depth, and water level over distance and time |
+| `Summary_Charts.pdf` | Discharge, velocity, depth, Froude number, and top width at the observation points, plus the inlet rating curve |
+| `Maximum_WSE_Velocity_Depth.pdf` | Maximum water level, velocity, and force on a person along the reach |
+| `Dam_Breach_Like_.mp4` | Water level, velocity, and force along the reach over time |
+| `Model_Results.mp4` | Depth, discharge, area, Froude number, top width, and velocity along the reach over time |
+| `Depth_WSE_Top_Width.mp4` | Three surveyed sections filled to the water level, flooded width in plan, and the water level profile |
+| `Detailed_Output.csv` | Six states per cell, one row per stored time |
+| `Detailed_Output_XS.csv` | The same states, one block per cell |
+| `Dam_Breach_Like_Outputs.csv` | For each observation point, the time and value of the maximum depth and velocity, the flood arrival time, and the maximum force |
+
+Points to know.
+
+- The kernel does not store its time step, so the top width replaces the V5
+  Courant number in the charts, the states video, and the CSV files.
+- Observation points are the run probes when every requested point is a
+  probe. Their series hold every accepted step. Otherwise the points read the
+  stored history. Up to five points fit the V5 layout.
+- The maximum water level and velocity profiles use `result.maxima`, which is
+  exact at every step. The maximum force uses the stored history.
+- The force on a person and the arrival rule (depth more than
+  `arrival_depth_m`, default 0.5 m, above the starting depth) follow the V5
+  scripts.
+- Each video has one frame per stored time. Set `'videos', false` to skip
+  them on long runs.
+
+[inputs_outputs.md](inputs_outputs.md) lists every post-processing option.
+
 ## 11. Check the run
 
 Read these after every run.
@@ -301,14 +345,25 @@ Status: completed
 Inflow 58500.0 m3, outflow 57915.5 m3, storage 584.5 m3, relative residual 1.9e-15
 ```
 
-The maximum water level stays well below the section tops along the reach.
+It then writes the nine post-processing products to `Modeling_Results/`,
+named `1_Example_Varying_...`. The figures below come from those files.
 
-![Maximum water level along the example reach](figures/example_maximum_water_level.png)
+The maximum water level stays well below the section tops along the reach.
+The maximum velocity near the inlet (about 3.9 m/s) comes from the first
+seconds of the run, when the wetting front is less than 2 cm deep. In the
+body of the flood the maximum is about 1.4 m/s. Read section-mean velocity
+maxima near a dry front with that in mind.
+
+![Maximum water level, velocity, and force along the example reach](figures/example_maximum_profiles.png)
 
 The peak attenuates downstream. It falls from 40 m3/s at the inlet to about
 24 m3/s at the outlet and arrives about 16 minutes later.
 
-![Discharge and depth at three probes](figures/example_probe_series.png)
+![Summary charts at the inlet, middle, and outlet](figures/example_summary_charts.png)
+
+One frame of the cross-section video, 19 minutes into the run.
+
+![Cross-section video frame](figures/example_cross_section_frame.png)
 
 ## 13. Troubleshooting
 
@@ -331,6 +386,8 @@ Each error has an identifier. Read it with `exception.identifier` in a
 | `hydrohp:UnsupportedBoundaryRegime` | A fixed outlet stage below critical depth, or a legacy boundary facing a regime it cannot handle | Raise the stage, use the rating, or keep `boundary_formulation = "regime"` |
 | `hydrohp:InvalidDiagnosticPath` | The folder for `progress_file` or `checkpoint_file` does not exist | Create the folder first |
 | `hydrohp:InvalidVaryingInput` | An option has the wrong type or value | Read the message, then the option table in [inputs_outputs.md](inputs_outputs.md) |
+| `hydrohp:NoHistory` | Post-processing got a result with fewer than two stored times | Check `result.status`. A run that overtopped during spin-up stores no event history |
+| `hydrohp:TooManyObservationPoints` | More than five observation points for post-processing | Pass at most five in `observation_x_m` |
 
 For depths that turn negative inside a step, set `negative_area_capture_file`
 to a `.mat` path. The run then saves the full state before the first such step

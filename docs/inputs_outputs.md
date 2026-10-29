@@ -157,6 +157,26 @@ wet = result.area_m2 > 1e-10;
 velocity_m_s(wet) = result.discharge_m3s(wet) ./ result.area_m2(wet);
 ```
 
+### Post-processing
+
+`files = hydrohp_postprocess_varying(result, input, Name, Value)` writes the
+V5 figures, videos, and CSV files. The user manual lists the products. Every
+option has a default.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `output_folder` | `"Modeling_Results"` | Folder for all files, created if missing |
+| `run_id`, `run_name` | `"1"`, `"HydroHP"` | File name prefix `<run_id>_<run_name>_` |
+| `observation_x_m` | probes, or inlet, middle, outlet | Up to five chainages |
+| `observation_labels` | `"x = ... m"` | One legend label per point |
+| `figures`, `videos`, `csv` | `true` | Which product groups to write |
+| `csv_layout` | `"by_section"` | `"by_state"` groups `Detailed_Output.csv` by state |
+| `arrival_depth_m` | `0.5` | Depth rise above the start that marks flood arrival |
+| `person_height_m`, `person_width_m` | `1.70`, `0.35` | Person used for the V5 force |
+| `specific_weight_n_m3` | `9810` | Specific weight of water |
+| `computational_time_s` | `NaN` | Wall time to report in `Dam_Breach_Like_Outputs.csv` |
+| `frame_rate` | `20` | Video frames per second |
+
 ### Ledger
 
 | Field | Contents |
