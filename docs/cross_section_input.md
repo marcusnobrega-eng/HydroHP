@@ -41,20 +41,18 @@ roughness for the complete wetted section. `dcm` sums conveyance over contiguous
 roughness zones. Tables stop at the lower of the two outer-bank elevations so
 that the cross-section remains closed.
 
-H4 does not interpolate geometry between profiles or connect these tables to
-the time-stepping kernel. Map the H4 tables to cell or interface coordinates
-with:
+Map the tables to cell or interface coordinates with:
 
 ```matlab
 [local_sections, mapping] = hydrohp_map_sections_to_grid(section_data, x_m);
 ```
 
-At surveyed chainages, the original H4 table is retained exactly. Between
+At surveyed chainages, the original table is retained exactly. Between
 surveys, the function brackets the location and linearly interpolates area,
 wetted perimeter, top width, hydrostatic integral, and conveyance at the same
 fraction of each profile's closed depth range. Derived radius, centroid depth,
 and equivalent Manning coefficient are then recomputed for consistency. The
 function refuses locations outside the surveyed chainage range.
 
-The mapping does not yet change the time-stepping equations. That numerical
-integration is the next part of H5.
+`hydrohp_run_varying` calls this mapping for every cell centre and face. See
+[inputs_outputs.md](inputs_outputs.md) for the run inputs and outputs.
