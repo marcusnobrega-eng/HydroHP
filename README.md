@@ -1,7 +1,23 @@
-# HydroHP-1D
+# 🌊 HydroHP-1D: Unsteady Saint-Venant Solver for Rivers and Dam Breaks
 
-HydroHP is an open MATLAB solver of the unsteady Saint-Venant equations for
-one-dimensional open-channel flow. It has two run paths.
+**HydroHP-1D** is an open MATLAB solver of the unsteady Saint-Venant equations
+for one-dimensional open-channel flow. It runs on surveyed cross-sections that
+vary along the reach, with a finite-volume scheme that keeps depths
+nonnegative on dry beds and at dam-break fronts.
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+![MATLAB R2025b tested](https://img.shields.io/badge/MATLAB-R2025b%20tested-orange.svg)
+[![Paper DOI](https://img.shields.io/badge/DOI-10.1016%2Fj.envsoft.2023.105733-blue.svg)](https://doi.org/10.1016/j.envsoft.2023.105733)
+![Issues](https://img.shields.io/github/issues/marcusnobrega-eng/HydroHP)
+![Forks](https://img.shields.io/github/forks/marcusnobrega-eng/HydroHP)
+![Stars](https://img.shields.io/github/stars/marcusnobrega-eng/HydroHP)
+![Last commit](https://img.shields.io/github/last-commit/marcusnobrega-eng/HydroHP)
+
+---
+
+## 📌 Overview
+
+HydroHP has two run paths.
 
 | Path | Entry point | Geometry | Scheme |
 |---|---|---|---|
@@ -13,9 +29,32 @@ varying-geometry kernel extends it for cross-sections that vary along the
 reach. Commit `27c25ec` is the kernel version used as the one-dimensional
 baseline of a dam-break mapping study that is under review.
 
-## Varying-geometry kernel
+---
 
-### What it adds
+## 🧭 Workflow
+
+```text
+Surveyed cross-sections (CSV, MATLAB table, or Excel sheet)
+        │
+        ├── hydrohp_build_section_tables
+        │       └── one hydraulic table per section (area, width, conveyance)
+        │
+        ├── hydrohp_run_varying
+        │       ├── tables mapped to every cell centre and face
+        │       ├── HLL fluxes with hydrostatic reconstruction
+        │       ├── inflow and outlet that follow the local flow regime
+        │       └── mass ledger and applicability guard
+        │
+        └── result
+                ├── maxima of stage, depth, and velocity per cell
+                ├── stored history and per-step probes
+                └── hydrohp_postprocess_varying
+                        └── V5 figures, videos, and CSV tables
+```
+
+---
+
+## ✨ What the Varying-Geometry Kernel Adds
 
 - Each surveyed cross-section gets its own hydraulic table. Area, wetted
   perimeter, top width, hydrostatic integral, and conveyance are tabulated by
@@ -28,7 +67,9 @@ baseline of a dam-break mapping study that is under review.
   extended.
 - Every run keeps a mass ledger (inflow, outflow, storage, residual).
 
-### Equations
+---
+
+## 📐 Equations
 
 Along chainage $x$, with no lateral inflow,
 
@@ -49,7 +90,9 @@ $g$ is gravity, $S_f$ is friction slope, and $K$ is the section conveyance from
 its table. For one channel with Manning coefficient $n$ and hydraulic radius
 $R$, $K = AR^{2/3}/n$, so $S_f = n^2Q|Q|/(A^2R^{4/3})$.
 
-### Numerics
+---
+
+## 🧮 Numerics
 
 - Finite-volume scheme on a uniform grid with HLL fluxes (Harten et al., 1983)
   at every face. Friction is applied semi-implicitly after the flux update.
@@ -69,12 +112,14 @@ $R$, $K = AR^{2/3}/n$, so $S_f = n^2Q|Q|/(A^2R^{4/3})$.
   regime boundaries. `"reference"` is the scalar version kept for the
   equivalence tests.
 
-### Boundaries
+---
+
+## 🚧 Boundary Conditions
 
 With `boundary_formulation = "regime"` (default), both boundaries follow the
 local flow regime.
 
-Upstream, the discharge hydrograph enters as follows.
+**Inlet.** The discharge hydrograph enters as follows.
 
 | Inlet state | Rule |
 |---|---|
@@ -83,7 +128,7 @@ Upstream, the discharge hydrograph enters as follows.
 | No outgoing characteristic (dry inlet cell, or supercritical cell under subcritical normal flow), or no subcritical state admits the inflow | Impose the discharge at normal depth if the inlet cell is dry, at critical depth otherwise |
 | Zero discharge | Reflective wall |
 
-Downstream, the outlet works as follows.
+**Outlet.**
 
 | Outlet state | Rule |
 |---|---|
@@ -98,7 +143,9 @@ does not compute it. The caller supplies it as `downstream.slope`.
 `boundary_formulation = "legacy"` keeps the earlier inlet, which extrapolates
 the local depth and falls back to critical depth.
 
-### Initial state
+---
+
+## 💧 Initial State
 
 | `initialization_type` | Start |
 |---|---|
@@ -108,7 +155,9 @@ the local depth and falls back to critical depth.
 
 The dam-break study used the dry start.
 
-### Applicability guard
+---
+
+## 🛑 Applicability Guard
 
 When water rises above the top of a section, the run cannot continue on that
 geometry. With the default `overtopping_action = "error"`, HydroHP raises an
@@ -116,7 +165,9 @@ error. With `"stop"`, the run ends at the last accepted state,
 `result.status` is `"overtopped"`, and `result.overtopping` records the time
 and chainage. This is a limit of the section geometry, not a solver failure.
 
-### Run it
+---
+
+## 🚀 Quick Start
 
 Run from the repository root. This example uses the three sections in
 `Examples/cross_sections_example.csv` and starts dry.
@@ -141,17 +192,50 @@ result.status                    % "completed" or "overtopped"
 result.maxima.stage_m            % maximum water level per cell (m)
 result.maxima.velocity_m_s       % maximum mean velocity per cell (m/s)
 result.ledger.relative_residual  % volume balance
+
+files = hydrohp_postprocess_varying(result, input);   % figures, videos, CSVs
 ```
 
-`hydrohp_postprocess_varying(result, input)` writes the V5 post-processing
-figures, videos, and CSV files for the run, with the same names and format.
-`Examples/run_varying_example.m` runs this case and writes them.
-The [user manual](docs/user_manual.md) walks through a full run, from
-sections to checks and troubleshooting.
-[docs/inputs_outputs.md](docs/inputs_outputs.md) lists every input, option,
-and output.
+`Examples/run_varying_example.m` runs this case and writes every
+post-processing product to `Modeling_Results/`.
 
-## Legacy V5 path
+---
+
+## 📊 Outputs
+
+`hydrohp_postprocess_varying` writes the V5 post-processing products for a
+varying-section run, with the same file names, layouts, and formatting.
+
+| Product | Contents |
+|---|---|
+| `Surf_Plots.pdf` | Froude number, depth, and water level over distance and time |
+| `Summary_Charts.pdf` | Discharge, velocity, depth, Froude number, and top width at up to five points, plus the inlet rating curve |
+| `Maximum_WSE_Velocity_Depth.pdf` | Maximum water level, velocity, and force on a person along the reach |
+| `Dam_Breach_Like_.mp4`, `Model_Results.mp4`, `Depth_WSE_Top_Width.mp4` | Animations along the reach and at three surveyed sections |
+| `Detailed_Output.csv`, `Detailed_Output_XS.csv` | Depth, discharge, velocity, Froude number, top width, and water level per cell and time |
+| `Dam_Breach_Like_Outputs.csv` | Arrival time, maximum depth, velocity, and force at each point |
+
+<p align="center">
+  <img src="docs/figures/example_cross_section_frame.png" alt="Cross-section video frame" width="420">
+  <img src="docs/figures/example_maximum_profiles.png" alt="Maximum water level, velocity, and force profiles" width="300">
+</p>
+<p align="center"><em>Example outputs from <code>Examples/run_varying_example.m</code>. Left, one frame of the cross-section video. Right, maximum water level, velocity, and force along the reach.</em></p>
+
+---
+
+## 🔗 Documentation and Resources
+
+| Resource | Link |
+|---|---|
+| User manual | [docs/user_manual.md](docs/user_manual.md) |
+| Inputs, options, and outputs | [docs/inputs_outputs.md](docs/inputs_outputs.md) |
+| Cross-section table rules | [docs/cross_section_input.md](docs/cross_section_input.md) |
+| Model paper | <https://doi.org/10.1016/j.envsoft.2023.105733> |
+| Supplementary material (V5 workbook) | [docs/reference/Supplementary_Material_HydroHP.pdf](docs/reference/Supplementary_Material_HydroHP.pdf) |
+
+---
+
+## 🗂️ Legacy V5 Path
 
 Run a workbook without editing the solver:
 
@@ -172,14 +256,18 @@ hydrographs, trapezoidal, circular, parabolic, and irregular sections, single
 and divided-channel hydraulic properties, and automatic plots, videos, and CSV
 outputs.
 
-## Requirements
+---
+
+## ⚙️ Requirements
 
 - MATLAB. The frozen V5 baseline was run with R2023b. The test suite passes
   with R2025b.
 - No toolbox is needed for the varying-geometry kernel.
 - Excel-compatible `.xlsx` files for the V5 inputs.
 
-## Tests
+---
+
+## 🧪 Tests
 
 Each file in `tests/` is a function that stops with an error when a check
 fails. Run all of them from the repository root:
@@ -187,6 +275,9 @@ fails. Run all of them from the repository root:
 ```bash
 matlab -batch "addpath(pwd); addpath('tests'); files = dir('tests/test_*.m'); for k = 1:numel(files), [~, name] = fileparts(files(k).name); disp(name); feval(name); end"
 ```
+
+<details>
+<summary>What each of the 16 tests checks</summary>
 
 | Test | Checks |
 |---|---|
@@ -207,26 +298,44 @@ matlab -batch "addpath(pwd); addpath('tests'); files = dir('tests/test_*.m'); fo
 | `test_h7_regression_package` | Published normal flow and analytical dam break |
 | `test_hydrohp_interface` | Legacy V5 interface from Excel and from a structure |
 
-## Repository layout
+</details>
 
-| Path | Contents |
-|---|---|
-| `hydrohp_*.m` | Varying-geometry kernel, section tables, grid mapping, post-processing, and the callable V5 interface |
-| Other root `.m` files | V5 solver, input, hydraulic-property, and postprocessing scripts |
-| `Examples/` | Example inputs for both paths |
-| `tests/` | Test functions |
-| `docs/user_manual.md` | Step-by-step guide to the varying-geometry kernel |
-| `docs/inputs_outputs.md` | Inputs, options, and outputs of the varying-geometry kernel |
-| `docs/cross_section_input.md` | Cross-section table schema and validation rules |
-| `docs/reference/` | Published supplement and hydraulic-property reference figures |
-| `docs/tutorial/` | Tutorial slides and teaching material |
-| `apps/` | Optional MATLAB applications |
+---
+
+## 📁 Repository Organization
+
+```text
+HydroHP/
+├── hydrohp_run_varying.m             varying-geometry runner
+├── hydrohp_varying_step_compiled.m   compiled finite-volume step
+├── hydrohp_varying_step.m            scalar reference step
+├── hydrohp_build_section_tables.m    hydraulic table per section
+├── hydrohp_map_sections_to_grid.m    tables at cells and faces
+├── hydrohp_postprocess_varying.m     V5 figures, videos, and CSVs
+├── hydrohp_*.m                       section input, validation, and helpers
+├── hydrohp_run.m                     callable V5 interface
+├── HydroHP_1D_V5.m                   legacy V5 solver and its scripts
+├── Examples/                         example inputs for both paths
+├── tests/                            test functions
+├── docs/
+│   ├── user_manual.md                step-by-step guide
+│   ├── inputs_outputs.md             every input, option, and output
+│   ├── cross_section_input.md        cross-section table rules
+│   ├── figures/                      manual figures
+│   ├── reference/                    published supplement and figures
+│   └── tutorial/                     slides and teaching material
+├── apps/                             optional MATLAB applications
+├── CITATION.cff
+└── LICENSE
+```
 
 Generated results and historical ZIP distributions are not kept on the active
 branch. They remain recoverable from Git history and the tag
 `legacy-v5-pre-modernization-2026-10-07`.
 
-## Citation
+---
+
+## 📄 Citation
 
 Please cite the model paper:
 
@@ -241,7 +350,36 @@ If you use the varying-geometry kernel, also give the commit you ran. The
 dam-break study used commit `27c25ec`. Machine-readable citation metadata are
 in `CITATION.cff`.
 
-Numerical methods:
+### BibTeX
+
+```bibtex
+@article{gomes_hydrohp_2023,
+  author  = {Gomes J{\'u}nior, Marcus N. and Castillo R{\'a}palo, Luis M. C. and
+             Oliveira, Paulo T. S. and Giacomoni, Marcio H. and
+             do Lago, C{\'e}sar A. F. and Mendiondo, Eduardo M.},
+  title   = {Modeling unsteady and steady 1D hydrodynamics under different
+             hydraulic conceptualizations: Model/software development and
+             case studies},
+  journal = {Environmental Modelling \& Software},
+  volume  = {167},
+  pages   = {105733},
+  year    = {2023},
+  doi     = {10.1016/j.envsoft.2023.105733}
+}
+```
+
+```bibtex
+@misc{gomes_hydrohp_github_2026,
+  author    = {Gomes Jr., Marcus N.},
+  title     = {HydroHP-1D: Unsteady Saint-Venant Solver with Cross-Sections
+               that Vary Along the Reach},
+  year      = {2026},
+  publisher = {GitHub},
+  url       = {https://github.com/marcusnobrega-eng/HydroHP}
+}
+```
+
+### Numerical methods
 
 - Harten, A., Lax, P. D., and van Leer, B. (1983). On upstream differencing
   and Godunov-type schemes for hyperbolic conservation laws. *SIAM Review*,
@@ -251,7 +389,9 @@ Numerical methods:
   reconstruction for shallow water flows. *SIAM Journal on Scientific
   Computing*, 25(6), 2050-2065. https://doi.org/10.1137/S1064827503431090
 
-## Known limitations
+---
+
+## ⚠️ Known Limitations
 
 - The varying-geometry runner needs a uniform grid that lies between the first
   and last section chainages.
@@ -267,10 +407,20 @@ Numerical methods:
   configuration and geometry from an Excel workbook. Some legacy
   postprocessing profiles fail after the numerical loop completes.
 
-## License
+---
 
-HydroHP is distributed under the [MIT License](LICENSE).
+## 👤 Developer
 
-## Contact
+**Marcus N. Gomes Jr., PhD**  
+Postdoctoral Researcher, Stanford University  
 
-Marcus Nóbrega Gomes Júnior, `marcusnobrega.engcivil@gmail.com`
+GitHub: [@marcusnobrega-eng](https://github.com/marcusnobrega-eng)  
+ORCID: [0000-0002-8250-8195](https://orcid.org/0000-0002-8250-8195)  
+Email: `marcusnobrega.engcivil@gmail.com`
+
+---
+
+## 📜 License
+
+HydroHP is released under the MIT License. See [`LICENSE`](./LICENSE) for
+details.
