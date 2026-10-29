@@ -10,7 +10,7 @@ one-dimensional open-channel flow. It has two run paths.
 
 The V5 path is the model published in Gomes Júnior et al. (2023). The
 varying-geometry kernel extends it for cross-sections that vary along the
-reach. Commit `9f1d944` is the kernel version used as the one-dimensional
+reach. Commit `27c25ec` is the kernel version used as the one-dimensional
 baseline of a dam-break mapping study that is under review.
 
 ## Varying-geometry kernel
@@ -238,7 +238,7 @@ Please cite the model paper:
 > https://doi.org/10.1016/j.envsoft.2023.105733
 
 If you use the varying-geometry kernel, also give the commit you ran. The
-dam-break study used commit `9f1d944`. Machine-readable citation metadata are
+dam-break study used commit `27c25ec`. Machine-readable citation metadata are
 in `CITATION.cff`.
 
 Numerical methods:

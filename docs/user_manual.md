@@ -32,12 +32,10 @@ tests pass with R2025b.
 ```bash
 git clone https://github.com/marcusnobrega-eng/HydroHP.git
 cd HydroHP
-git checkout feature/varying-geometry-kernel
 ```
 
-The kernel lives on branch `feature/varying-geometry-kernel` until it is
-merged into `main`. For reproducible work, check out the exact commit you will
-cite. The dam-break study used `9f1d944`.
+The kernel is on `main`. For reproducible work, check out the exact commit you
+will cite. The dam-break study used `27c25ec`.
 
 Add the repository root to the MATLAB path and run one short test:
 
